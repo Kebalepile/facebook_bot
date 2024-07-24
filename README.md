@@ -2,7 +2,7 @@
 
 ## Project Description
 
-This project aims to automate outreach on Facebook by creating a bot that logs in with provided credentials, navigates to specified groups, accesses the members list, and sends each member an advertising message.
+Automates outreach on Facebook by creating a bot that logs in with provided credentials, navigates to specified groups, accesses the members list, and sends each member an advertising message.
 
 ## Features
 

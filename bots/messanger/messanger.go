@@ -1,4 +1,4 @@
-package bots
+package messanger
 
 import (
 	"context"

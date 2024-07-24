@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	
+
 	log.Println("Init facebook Bot")
 	mBot := messanger.Bot{
 		Name:    "Messanger Bot",
@@ -17,13 +17,13 @@ func main() {
 	}
 
 	bots := []types.FacebookBot{
-		mBot,
+		&mBot,
 	}
 
 	var wg sync.WaitGroup
 	for _, bot := range bots {
 		wg.Add(1)
-		go bot.Run()
+		go bot.Run(&wg)
 	}
 
 	wg.Wait()

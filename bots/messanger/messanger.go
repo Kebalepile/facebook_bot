@@ -3,7 +3,6 @@ package messanger
 import (
 	"bufio"
 	"context"
-	"github.com/chromedp/cdproto/browser"
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/chromedp"
 	"log"
@@ -44,25 +43,7 @@ func (b *Bot) Run(wg *sync.WaitGroup) {
 	ctx, cancel = chromedp.NewContext(ctx)
 	b.Quit = cancel
 
-	log.Println(b.Name, " loading url: ", b.URL)
-
-	// Set up permission requests handling
-	
-	
-    chromedp.ListenTarget(ctx, func(ev interface{}) {
-        if ev, ok := ev.(*browser.EventPermissionRequested); ok {
-            if ev.Permission == "notifications" {
-                log.Println("Denying notification permission request")
-                err := chromedp.Run(ctx, browser.SetPermission(&browser.PermissionDescriptor{
-                    Name: "notifications",
-                }, browser.PermissionSettingDenied).Do(ctx))
-                if err != nil {
-                    log.Println("Error setting permission:", err)
-                }
-            }
-        }
-    })
-	log.Println(b.Name, " loading url: ", b.URL)
+	log.Println(b.Name, "loading URL: ", b.URL)
 
 	err := chromedp.Run(ctx,
 		chromedp.Navigate(b.URL),
@@ -73,41 +54,72 @@ func (b *Bot) Run(wg *sync.WaitGroup) {
 	b.error(err)
 
 	// Keep the browser open and wait for user input
-	b.waitForUserInput()
+	// b.waitForUserInput()
 	b.pause(10)
+
+	// Wait for end-user to type 'continue' & press Enter before proceeding
+	b.waitForContinue()
+
 	// Handle alerts
-   
 	b.navigate_to_group(ctx)
+}
+
+// Wait for user to type 'continue' and press Enter
+func (b *Bot) waitForContinue() {
+	log.Println("Type 'continue' and press Enter to proceed...")
+
+	reader := bufio.NewReader(os.Stdin)
+
+	for {
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			log.Println("Error reading input:", err)
+			continue
+		}
+
+		// Trim any whitespace or newline characters from the input
+		input = strings.TrimSpace(input)
+
+		// Check if the input is "continue"
+		if input == "continue" {
+			break
+		} else {
+			log.Println("Invalid input. Type 'continue' and press Enter to proceed...")
+		}
+	}
 }
 
 // Navigates to the group and clicks the more SVG once visible
 func (b *Bot) navigate_to_group(ctx context.Context) {
 	moreSvg := "M3.25 2.75a1.25 1.25 0 1 0 0 2.5h17.5a1.25 1.25 0 1 0 0-2.5H3.25zM2 12c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 13.25 2 12.69 2 12zm0 8c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 21.25 2 20.69 2 20z"
-
-	
+	b.pause(10)
+	log.Println("navigating to group")
 	err := chromedp.Run(ctx,
-		
-		b.clickSvgByPath(moreSvg),
+		b.clickSvgParentElementByPath(moreSvg),
 	)
 	b.error(err)
 }
 
 // Click an SVG element by matching its path attribute after waiting for it to be visible
-func (b *Bot) clickSvgByPath(pathValue string) chromedp.Tasks {
+func (b *Bot) clickSvgParentElementByPath(pathValue string) chromedp.Tasks {
+	
 	return chromedp.Tasks{
-		chromedp.WaitVisible(`svg path`, chromedp.ByQueryAll),
 		chromedp.ActionFunc(func(ctx context.Context) error {
-
 			var nodes []*cdp.Node
-			err := chromedp.Nodes(`svg path`, &nodes, chromedp.ByQuery).Do(ctx)
+			err := chromedp.Nodes(`svg path`, &nodes, chromedp.ByQueryAll).Do(ctx)
 			if err != nil {
 				return err
 			}
+
 			if len(nodes) > 0 {
 				for _, node := range nodes {
 					pathAttr := node.AttributeValue("d")
 					if pathAttr == pathValue {
-						return chromedp.Click(node.FullXPath()).Do(ctx)
+						parent := node.Parent.Parent // Get the grandparent element
+						if parent != nil {
+							// Click the grandparent element
+							return chromedp.Click(parent.FullXPath()).Do(ctx)
+						}
 					}
 				}
 			}

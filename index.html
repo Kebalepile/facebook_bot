@@ -5,11 +5,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Document</title>
   </head>
+<script>
+  function clickSvgParentElementByPath(pathValue) {
+    console.log("click svg by path called");
 
+    // Wait for the SVG paths to be visible
+    const interval = setInterval(() => {
+        const svgPaths = document.querySelectorAll('svg path');
+        if (svgPaths.length > 0) {
+            clearInterval(interval);
+
+            svgPaths.forEach(svgPath => {
+                // Get the "d" attribute of each path element
+                const pathAttr = svgPath.getAttribute('d');
+
+                // Check if the "d" attribute matches the desired path value
+                if (pathAttr === pathValue) {
+                    // Click the grandparent element of the SVG path element
+                    const parentElement = svgPath.closest('svg').parentElement;
+                    if (parentElement) {
+                      console.log(parentElement)
+                        parentElement.click();
+                        console.log("Clicked the parent element of the SVG path.");
+                    } else {
+                        console.log("Parent element not found.");
+                    }
+                }
+            });
+        }
+    }, 100); // Check every 100ms
+}
+
+// Call the function with your desired path value
+var pathValue = 'M3.25 2.75a1.25 1.25 0 1 0 0 2.5h17.5a1.25 1.25 0 1 0 0-2.5H3.25zM2 12c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 13.25 2 12.69 2 12zm0 8c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 21.25 2 20.69 2 20z';
+clickSvgParentElementByPath(pathValue);
+
+</script>
   <body
     class="fbIndex UIPage_LoggedOut _-kb _605a b_c3pyn-ahh chrome webkit win x1 Locale_en_GB cores-lt4 _19_u"
     dir="ltr"
   >
-  <path d="M3.25 2.75a1.25 1.25 0 1 0 0 2.5h17.5a1.25 1.25 0 1 0 0-2.5H3.25zM2 12c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 13.25 2 12.69 2 12zm0 8c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 21.25 2 20.69 2 20z"></path>
+  <!-- <path d="M3.25 2.75a1.25 1.25 0 1 0 0 2.5h17.5a1.25 1.25 0 1 0 0-2.5H3.25zM2 12c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 13.25 2 12.69 2 12zm0 8c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 21.25 2 20.69 2 20z"></path> -->
   </body>
 </html>

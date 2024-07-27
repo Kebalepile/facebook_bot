@@ -5,46 +5,72 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Document</title>
   </head>
-<script>
-  function clickSvgParentElementByPath(pathValue) {
-    console.log("click svg by path called");
-
-    // Wait for the SVG paths to be visible
-    const interval = setInterval(() => {
-        const svgPaths = document.querySelectorAll('svg path');
-        if (svgPaths.length > 0) {
-            clearInterval(interval);
-
-            svgPaths.forEach(svgPath => {
-                // Get the "d" attribute of each path element
-                const pathAttr = svgPath.getAttribute('d');
-
-                // Check if the "d" attribute matches the desired path value
-                if (pathAttr === pathValue) {
-                    // Click the grandparent element of the SVG path element
-                    const parentElement = svgPath.closest('svg').parentElement;
-                    if (parentElement) {
-                      console.log(parentElement)
-                        parentElement.click();
-                        console.log("Clicked the parent element of the SVG path.");
-                    } else {
-                        console.log("Parent element not found.");
-                    }
-                }
-            });
-        }
-    }, 100); // Check every 100ms
-}
-
-// Call the function with your desired path value
-var pathValue = 'M3.25 2.75a1.25 1.25 0 1 0 0 2.5h17.5a1.25 1.25 0 1 0 0-2.5H3.25zM2 12c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 13.25 2 12.69 2 12zm0 8c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 21.25 2 20.69 2 20z';
-clickSvgParentElementByPath(pathValue);
-
-</script>
-  <body
-    class="fbIndex UIPage_LoggedOut _-kb _605a b_c3pyn-ahh chrome webkit win x1 Locale_en_GB cores-lt4 _19_u"
-    dir="ltr"
-  >
-  <!-- <path d="M3.25 2.75a1.25 1.25 0 1 0 0 2.5h17.5a1.25 1.25 0 1 0 0-2.5H3.25zM2 12c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 13.25 2 12.69 2 12zm0 8c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 21.25 2 20.69 2 20z"></path> -->
+  <body>
+    <div class="x6ikm8r x10wlt62 xlshs6z">
+      <div
+        class="x6s0dn4 x9f619 x2lah0s x1hshjfz x1n2onr6 x3nfvp2 xrbpyxo x16dsc37 xng8ra x1pi30zi x1swvt13"
+      >
+        <span
+          class="x193iq5w xeuugli x13faqbe x1vvkbs x1xmvt09 x1lliihq x1s928wv xhkezso x1gmr53x x1cpjm7i x1fgarty x1943h6x xudqn12 x3x7a5m x6prxxf xvq8zen x1s688f xi81zsa"
+          dir="auto"
+          >About</span
+        >
+        <div class=""></div>
+      </div>
+      <div
+        class="x6s0dn4 x9f619 x2lah0s x1hshjfz x1n2onr6 x3nfvp2 xrbpyxo x16dsc37 xng8ra x1pi30zi x1swvt13"
+      >
+        <span
+          class="x193iq5w xeuugli x13faqbe x1vvkbs x1xmvt09 x1lliihq x1s928wv xhkezso x1gmr53x x1cpjm7i x1fgarty x1943h6x xudqn12 x3x7a5m x6prxxf xvq8zen x1s688f xi81zsa"
+          dir="auto"
+          >Discussion</span
+        >
+        <div class=""></div>
+      </div>
+      <div
+        class="x6s0dn4 x9f619 x2lah0s x1hshjfz x1n2onr6 x3nfvp2 xrbpyxo x16dsc37 xng8ra x1pi30zi x1swvt13"
+      >
+        <span
+          class="x193iq5w xeuugli x13faqbe x1vvkbs x1xmvt09 x1lliihq x1s928wv xhkezso x1gmr53x x1cpjm7i x1fgarty x1943h6x xudqn12 x3x7a5m x6prxxf xvq8zen x1s688f x1qq9wsj"
+          dir="auto"
+          >People</span
+        >
+        <div
+          class="x11t77rh x146dn1l x1ey2m1c xds687c xuoj239 x10l6tqk x17qophe"
+          style="background-color: var(--accent)"
+        ></div>
+      </div>
+      <div
+        class="x6s0dn4 x9f619 x2lah0s x1hshjfz x1n2onr6 x3nfvp2 xrbpyxo x16dsc37 xng8ra x1pi30zi x1swvt13"
+      >
+        <span
+          class="x193iq5w xeuugli x13faqbe x1vvkbs x1xmvt09 x1lliihq x1s928wv xhkezso x1gmr53x x1cpjm7i x1fgarty x1943h6x xudqn12 x3x7a5m x6prxxf xvq8zen x1s688f xi81zsa"
+          dir="auto"
+          >Events</span
+        >
+        <div class=""></div>
+      </div>
+      <div
+        class="x6s0dn4 x9f619 x2lah0s x1hshjfz x1n2onr6 x3nfvp2 xrbpyxo x16dsc37 xng8ra x1pi30zi x1swvt13"
+      >
+        <span
+          class="x193iq5w xeuugli x13faqbe x1vvkbs x1xmvt09 x1lliihq x1s928wv xhkezso x1gmr53x x1cpjm7i x1fgarty x1943h6x xudqn12 x3x7a5m x6prxxf xvq8zen x1s688f xi81zsa"
+          dir="auto"
+          >Media</span
+        >
+        <div class=""></div>
+      </div>
+      <div
+        class="x6s0dn4 x9f619 x2lah0s x1hshjfz x1n2onr6 x3nfvp2 xrbpyxo x16dsc37 xng8ra x1pi30zi x1swvt13"
+      >
+        <span
+          class="x193iq5w xeuugli x13faqbe x1vvkbs x1xmvt09 x1lliihq x1s928wv xhkezso x1gmr53x x1cpjm7i x1fgarty x1943h6x xudqn12 x3x7a5m x6prxxf xvq8zen x1s688f xi81zsa"
+          dir="auto"
+          >Files</span
+        >
+        <div class=""></div>
+      </div>
+    </div>
   </body>
 </html>
+

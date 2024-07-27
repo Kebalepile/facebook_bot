@@ -67,7 +67,7 @@ func (b *Bot) Run(wg *sync.WaitGroup) {
 
 // Wait for user to type 'continue' and press Enter
 func (b *Bot) waitForContinue() {
-	log.Printf("%v paused waiting for you command \n\nType 'continue' and press Enter to proceed...", b.Name)
+	log.Printf("%v paused waiting for you command. \nType 'continue' and press Enter to proceed...", b.Name)
 
 	reader := bufio.NewReader(os.Stdin)
 
@@ -158,9 +158,98 @@ func (b *Bot) navigate_to_group(ctx context.Context) {
 			log.Println(result)
 			return nil
 		}),
+		chromedp.Sleep(10*time.Second),
+		chromedp.ActionFunc(func(ctx context.Context) error {
+
+			return b.clickElementWithText(ctx, "people")
+		}),
 	)
 	b.error(err)
+
 	b.waitForUserInput()
+}
+
+// clickElementWithText clicks on the element containing the text 'People', case-insensitively
+func (b *Bot) clickElementWithText(ctx context.Context, text string) error {
+	var result string
+	jsCode := fmt.Sprintf(`
+		(function() {
+			// Convert target text to lower case
+			let targetText = "%s".toLowerCase();
+			
+			// Find all elements (e.g., span, div, etc.)
+			let elements = document.body.querySelectorAll('*');
+			let clicked = false;
+
+			for (let element of elements) {
+				if (element.textContent.toLowerCase().includes(targetText)) {
+					// Find the closest <a> tag ancestor
+					let anchorElement = element.closest('a');
+					if (anchorElement) {
+						anchorElement.click(); // Click the <a> element
+						clicked = true;
+						console.log('Anchor element clicked');
+						return 'Anchor element clicked';
+					}
+				}
+			}
+
+			if (!clicked) {
+				console.log('No matching element found');
+				return 'No matching element found';
+			}
+		})();
+	`, text)
+
+	// Evaluate the JavaScript code
+	err := chromedp.Evaluate(jsCode, &result).Do(ctx)
+	if err != nil {
+		log.Printf("Error evaluating JS: %v", err)
+		return err
+	}
+
+	log.Println(result)
+	b.findElementAndScrollIntoView(ctx, "new to the group")
+	return nil
+}
+
+func (b *Bot) findElementAndScrollIntoView(ctx context.Context, text string) error {
+	var result string
+	jsCode := fmt.Sprintf(`
+		(function() {
+			// Convert target text to lower case
+			let targetText = "%s".toLowerCase();
+			
+			// Find all elements (e.g., span, div, etc.)
+			let elements = document.body.querySelectorAll('span');
+			let scrolled = false;
+
+			for (let element of elements) {
+				if (element.textContent.toLowerCase().includes(targetText)) {
+					element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+					scrolled = true;
+					console.log('Element scrolled into view');
+					return 'Element scrolled into view';
+				}
+			}
+
+			if (!scrolled) {
+				console.log('No matching element found');
+				return 'No matching element found';
+			}
+		})();
+	`, text)
+
+	// Evaluate the JavaScript code
+	b.pause(10)
+	err := chromedp.Evaluate(jsCode, &result).Do(ctx)
+	if err != nil {
+		log.Printf("Error evaluating JS: %v", err)
+		return err
+	}
+
+	log.Println(result)
+	return nil
 }
 
 // Click an SVG element by matching its path attribute after waiting for it to be visible

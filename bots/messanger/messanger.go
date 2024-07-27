@@ -3,6 +3,7 @@ package messanger
 import (
 	"bufio"
 	"context"
+	"fmt"
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/chromedp"
 	"log"
@@ -92,13 +93,75 @@ func (b *Bot) waitForContinue() {
 // Navigates to the group and clicks the more SVG once visible
 func (b *Bot) navigate_to_group(ctx context.Context) {
 	moreSvg := "M3.25 2.75a1.25 1.25 0 1 0 0 2.5h17.5a1.25 1.25 0 1 0 0-2.5H3.25zM2 12c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 13.25 2 12.69 2 12zm0 8c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 21.25 2 20.69 2 20z"
+
 	b.pause(10)
 	log.Println("navigating to group")
+	log.Println("entering group name to the search group, search form")
+	selector := `input[placeholder="Search groups"]`
+	searchGroup := b.env()["SEARCH_GROUP"]
 	err := chromedp.Run(ctx,
 		b.clickSvgParentElementByPath(moreSvg),
+		chromedp.Evaluate(`document.querySelectorAll('span').forEach(element => {
+			if (element.textContent.trim() === 'Groups') {
+				element.click();
+			}
+		});`, nil),
+		b.waitVisibleAndSendKeys(selector, searchGroup), // Send the search query
+		chromedp.SendKeys(selector, "\n"), // Simulate pressing the Enter key
+
+		// Pause for 10 seconds before executing the next action
+		chromedp.Sleep(10*time.Second),
+
+		// Ensure the group is public, find and click the first matching element
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			var result string
+			jsCode := fmt.Sprintf(`
+				(function() {
+					// Check for 'Public' in any span element
+					let publicGroup = Array.from(document.querySelectorAll('span')).find(span => 
+						span.textContent.includes('Public') && span.textContent.includes('members')
+					);
+		
+					if (!publicGroup) {
+						console.log('Group is not public');
+						return 'Group is not public';
+					}
+		
+					// Find and click the <a> tag that matches the group name
+					let targetText = "%s".toLowerCase(); // This will be dynamic in your actual use case
+					let groupElement = publicGroup.closest('[role="feed"]').querySelectorAll('a[aria-hidden="true"]');
+					let clicked = false;
+		
+					for (let i = 0; i < groupElement.length; i++) {
+						let element = groupElement[i];
+						if (element.textContent.toLowerCase().includes(targetText)) {
+							element.click(); // Click the first matching element
+							clicked = true;
+							console.log('Group clicked');
+							return 'Group clicked';
+						}
+					}
+		
+					if (!clicked) {
+						console.log('No matching group found');
+						return 'No matching group found';
+					}
+				})();
+			`, searchGroup)
+			err := chromedp.Evaluate(jsCode, &result).Do(ctx)
+			if err != nil {
+				log.Printf("Error evaluating JS: %v", err)
+				return err
+			}
+			log.Println(result)
+			return nil
+		}),
+		
 	)
 	b.error(err)
+	b.waitForUserInput()
 }
+
 
 // Click an SVG element by matching its path attribute after waiting for it to be visible
 func (b *Bot) clickSvgParentElementByPath(pathValue string) chromedp.Tasks {

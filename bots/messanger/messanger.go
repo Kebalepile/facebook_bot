@@ -228,8 +228,8 @@ func (b *Bot) findElementAndScrollIntoView(ctx context.Context, text string) err
 				if (element.textContent.toLowerCase().includes(targetText)) {
 					element.scrollIntoView({ behavior: 'smooth', block: 'center' });
 					scrolled = true;
-					console.log('Element scrolled into view');
-					return 'Element scrolled into view';
+					// console.log('Element scrolled into view');
+					return 'new group members scrolled into view';
 				}
 			}
 

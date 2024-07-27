@@ -24,7 +24,7 @@ type Bot struct {
 
 func (b *Bot) Run(wg *sync.WaitGroup) {
 	defer wg.Done()
-	log.Println("init: ", b.Name)
+	log.Printf("init: %v", b.Name)
 
 	// Load the .env variables
 	envVars := b.env()
@@ -67,7 +67,7 @@ func (b *Bot) Run(wg *sync.WaitGroup) {
 
 // Wait for user to type 'continue' and press Enter
 func (b *Bot) waitForContinue() {
-	log.Println("Type 'continue' and press Enter to proceed...")
+	log.Printf("%v paused waiting for you command \n\nType 'continue' and press Enter to proceed...", b.Name)
 
 	reader := bufio.NewReader(os.Stdin)
 
@@ -97,6 +97,7 @@ func (b *Bot) navigate_to_group(ctx context.Context) {
 	b.pause(10)
 	log.Println("navigating to group")
 	log.Println("entering group name to the search group, search form")
+
 	selector := `input[placeholder="Search groups"]`
 	searchGroup := b.env()["SEARCH_GROUP"]
 	err := chromedp.Run(ctx,
@@ -107,6 +108,7 @@ func (b *Bot) navigate_to_group(ctx context.Context) {
 			}
 		});`, nil),
 		b.waitVisibleAndSendKeys(selector, searchGroup), // Send the search query
+		chromedp.Sleep(3*time.Second),
 		chromedp.SendKeys(selector, "\n"), // Simulate pressing the Enter key
 
 		// Pause for 10 seconds before executing the next action
@@ -156,16 +158,14 @@ func (b *Bot) navigate_to_group(ctx context.Context) {
 			log.Println(result)
 			return nil
 		}),
-		
 	)
 	b.error(err)
 	b.waitForUserInput()
 }
 
-
 // Click an SVG element by matching its path attribute after waiting for it to be visible
 func (b *Bot) clickSvgParentElementByPath(pathValue string) chromedp.Tasks {
-	
+
 	return chromedp.Tasks{
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			var nodes []*cdp.Node
@@ -213,7 +213,7 @@ func (b *Bot) waitForUserInput() {
 	for {
 		input, err := reader.ReadString('\n')
 		if err != nil {
-			log.Println("Error reading input:", err)
+			log.Printf("Error reading input: %v", err)
 			continue
 		}
 
@@ -248,16 +248,16 @@ func (b *Bot) pause(second int) {
 
 // closes chromedp browser instance
 func (b *Bot) quit() {
-	log.Println(b.Name, "done.")
+	log.Printf("%v done.", b.Name)
 	b.Quit()
 }
 
 func (b *Bot) error(err error) {
 	if err != nil {
 		log.Println("*************************************")
-		log.Println(b.Name, " Error:")
+		log.Printf(" %v Error:", b.Name)
 		log.Println(err.Error())
-		log.Println(b.Name, " please restart bot")
+		log.Printf(" %v please restart bot", b.Name)
 		log.Println("*************************************")
 		log.Fatal(err)
 	}

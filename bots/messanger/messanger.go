@@ -119,11 +119,11 @@ func (b *Bot) navigate_to_group(ctx context.Context) {
 				(function() {
 					// Check for 'Public' in any span element
 					let publicGroup = Array.from(document.querySelectorAll('span')).find(span => 
-						span.textContent.includes('Public') && span.textContent.includes('members')
+						span.textContent.toLowerCase().includes('public') && span.textContent.toLowerCase().includes('members')
 					);
 		
 					if (!publicGroup) {
-						console.log('Group is not public');
+						// console.log('Group is not public');
 						return 'Group is not public';
 					}
 		
@@ -137,7 +137,7 @@ func (b *Bot) navigate_to_group(ctx context.Context) {
 						if (element.textContent.toLowerCase().includes(targetText)) {
 							element.click(); // Click the first matching element
 							clicked = true;
-							console.log('Group clicked');
+							// console.log('Group clicked');
 							return 'Group clicked';
 						}
 					}

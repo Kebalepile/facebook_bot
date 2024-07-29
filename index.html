@@ -6,71 +6,48 @@
     <title>Document</title>
   </head>
   <body>
-    <div class="x6ikm8r x10wlt62 xlshs6z">
-      <div
-        class="x6s0dn4 x9f619 x2lah0s x1hshjfz x1n2onr6 x3nfvp2 xrbpyxo x16dsc37 xng8ra x1pi30zi x1swvt13"
-      >
-        <span
-          class="x193iq5w xeuugli x13faqbe x1vvkbs x1xmvt09 x1lliihq x1s928wv xhkezso x1gmr53x x1cpjm7i x1fgarty x1943h6x xudqn12 x3x7a5m x6prxxf xvq8zen x1s688f xi81zsa"
-          dir="auto"
-          >About</span
-        >
-        <div class=""></div>
-      </div>
-      <div
-        class="x6s0dn4 x9f619 x2lah0s x1hshjfz x1n2onr6 x3nfvp2 xrbpyxo x16dsc37 xng8ra x1pi30zi x1swvt13"
-      >
-        <span
-          class="x193iq5w xeuugli x13faqbe x1vvkbs x1xmvt09 x1lliihq x1s928wv xhkezso x1gmr53x x1cpjm7i x1fgarty x1943h6x xudqn12 x3x7a5m x6prxxf xvq8zen x1s688f xi81zsa"
-          dir="auto"
-          >Discussion</span
-        >
-        <div class=""></div>
-      </div>
-      <div
-        class="x6s0dn4 x9f619 x2lah0s x1hshjfz x1n2onr6 x3nfvp2 xrbpyxo x16dsc37 xng8ra x1pi30zi x1swvt13"
-      >
-        <span
-          class="x193iq5w xeuugli x13faqbe x1vvkbs x1xmvt09 x1lliihq x1s928wv xhkezso x1gmr53x x1cpjm7i x1fgarty x1943h6x xudqn12 x3x7a5m x6prxxf xvq8zen x1s688f x1qq9wsj"
-          dir="auto"
-          >People</span
-        >
-        <div
-          class="x11t77rh x146dn1l x1ey2m1c xds687c xuoj239 x10l6tqk x17qophe"
-          style="background-color: var(--accent)"
-        ></div>
-      </div>
-      <div
-        class="x6s0dn4 x9f619 x2lah0s x1hshjfz x1n2onr6 x3nfvp2 xrbpyxo x16dsc37 xng8ra x1pi30zi x1swvt13"
-      >
-        <span
-          class="x193iq5w xeuugli x13faqbe x1vvkbs x1xmvt09 x1lliihq x1s928wv xhkezso x1gmr53x x1cpjm7i x1fgarty x1943h6x xudqn12 x3x7a5m x6prxxf xvq8zen x1s688f xi81zsa"
-          dir="auto"
-          >Events</span
-        >
-        <div class=""></div>
-      </div>
-      <div
-        class="x6s0dn4 x9f619 x2lah0s x1hshjfz x1n2onr6 x3nfvp2 xrbpyxo x16dsc37 xng8ra x1pi30zi x1swvt13"
-      >
-        <span
-          class="x193iq5w xeuugli x13faqbe x1vvkbs x1xmvt09 x1lliihq x1s928wv xhkezso x1gmr53x x1cpjm7i x1fgarty x1943h6x xudqn12 x3x7a5m x6prxxf xvq8zen x1s688f xi81zsa"
-          dir="auto"
-          >Media</span
-        >
-        <div class=""></div>
-      </div>
-      <div
-        class="x6s0dn4 x9f619 x2lah0s x1hshjfz x1n2onr6 x3nfvp2 xrbpyxo x16dsc37 xng8ra x1pi30zi x1swvt13"
-      >
-        <span
-          class="x193iq5w xeuugli x13faqbe x1vvkbs x1xmvt09 x1lliihq x1s928wv xhkezso x1gmr53x x1cpjm7i x1fgarty x1943h6x xudqn12 x3x7a5m x6prxxf xvq8zen x1s688f xi81zsa"
-          dir="auto"
-          >Files</span
-        >
-        <div class=""></div>
-      </div>
-    </div>
+    <script>
+      ;(function () {
+        // Helper function to find the group section
+        function findGroupSection() {
+          return Array.from(document.querySelectorAll('span')).find(
+            span =>
+              span.textContent.toLowerCase().includes('public') &&
+              (span.textContent.toLowerCase().includes('members') ||
+                span.textContent.toLowerCase().includes('people'))
+          )
+        }
+
+        // Check for 'Public' in any span element
+        let publicGroup = findGroupSection()
+
+        if (!publicGroup) {
+          console.log('Group is not public')
+          return 'Group is not public'
+        }
+
+        // Find and click the <a> tag that matches the group name
+        let targetText = '%s'.toLowerCase() // This will be dynamic in your actual use case
+        let groupElement = publicGroup
+          .closest('[role="feed"]')
+          .querySelectorAll('a[aria-hidden="true"]')
+        let clicked = false
+
+        for (let i = 0; i < groupElement.length; i++) {
+          let element = groupElement[i]
+          if (element.textContent.toLowerCase().includes(targetText)) {
+            element.click() // Click the first matching element
+            clicked = true
+            console.log('Group clicked')
+            return 'Group clicked'
+          }
+        }
+
+        if (!clicked) {
+          console.log('No matching group found')
+          return 'No matching group found'
+        }
+      })()
+    </script>
   </body>
 </html>
-

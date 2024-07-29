@@ -92,82 +92,152 @@ func (b *Bot) waitForContinue() {
 
 // Navigates to the group and clicks the more SVG once visible
 func (b *Bot) navigate_to_group(ctx context.Context) {
-	moreSvg := "M3.25 2.75a1.25 1.25 0 1 0 0 2.5h17.5a1.25 1.25 0 1 0 0-2.5H3.25zM2 12c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 13.25 2 12.69 2 12zm0 8c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 21.25 2 20.69 2 20z"
+    moreSvg := "M3.25 2.75a1.25 1.25 0 1 0 0 2.5h17.5a1.25 1.25 0 1 0 0-2.5H3.25zM2 12c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 13.25 2 12zm0 8c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 21.25 2 20.69 2 20z"
 
-	b.pause(10)
-	log.Println("navigating to group")
-	log.Println("entering group name to the search group, search form")
+    b.pause(10)
+    log.Println("Navigating to group")
+    log.Println("Entering group name to the search group, search form")
 
-	selector := `input[placeholder="Search groups"]`
-	searchGroup := b.env()["SEARCH_GROUP"]
-	err := chromedp.Run(ctx,
-		b.clickSvgParentElementByPath(moreSvg),
-		chromedp.Evaluate(`document.querySelectorAll('span').forEach(element => {
-			if (element.textContent.trim() === 'Groups') {
-				element.click();
-			}
-		});`, nil),
-		b.waitVisibleAndSendKeys(selector, searchGroup), // Send the search query
-		chromedp.Sleep(3*time.Second),
-		chromedp.SendKeys(selector, "\n"), // Simulate pressing the Enter key
+    selector := `input[placeholder="Search groups"]`
+    searchGroup := b.env()["SEARCH_GROUP"]
+    err := chromedp.Run(ctx,
+        b.clickSvgParentElementByPath(moreSvg),
+        chromedp.Evaluate(`document.querySelectorAll('span').forEach(element => {
+            if (element.textContent.trim() === 'Groups') {
+                element.click();
+            }
+        });`, nil),
+        b.waitVisibleAndSendKeys(selector, searchGroup), // Send the search query
+        chromedp.Sleep(3*time.Second),
+        chromedp.SendKeys(selector, "\n"), // Simulate pressing the Enter key
 
-		// Pause for 10 seconds before executing the next action
-		chromedp.Sleep(10*time.Second),
+        // Pause for 10 seconds before executing the next action
+        chromedp.Sleep(10*time.Second),
 
-		// Ensure the group is public, find and click the first matching element
-		chromedp.ActionFunc(func(ctx context.Context) error {
-			var result string
-			jsCode := fmt.Sprintf(`
-				(function() {
-					// Check for 'Public' in any span element
-					let publicGroup = Array.from(document.querySelectorAll('span')).find(span => 
-						span.textContent.toLowerCase().includes('public') && span.textContent.toLowerCase().includes('members')
-					);
-		
-					if (!publicGroup) {
-						// console.log('Group is not public');
-						return 'Group is not public';
-					}
-		
-					// Find and click the <a> tag that matches the group name
-					let targetText = "%s".toLowerCase(); // This will be dynamic in your actual use case
-					let groupElement = publicGroup.closest('[role="feed"]').querySelectorAll('a[aria-hidden="true"]');
-					let clicked = false;
-		
-					for (let i = 0; i < groupElement.length; i++) {
-						let element = groupElement[i];
-						if (element.textContent.toLowerCase().includes(targetText)) {
-							element.click(); // Click the first matching element
-							clicked = true;
-							// console.log('Group clicked');
-							return 'Group clicked';
-						}
-					}
-		
-					if (!clicked) {
-						console.log('No matching group found');
-						return 'No matching group found';
-					}
-				})();
-			`, searchGroup)
-			err := chromedp.Evaluate(jsCode, &result).Do(ctx)
-			if err != nil {
-				log.Printf("Error evaluating JS: %v", err)
-				return err
-			}
-			log.Println(result)
-			return nil
-		}),
-		chromedp.Sleep(10*time.Second),
-		chromedp.ActionFunc(func(ctx context.Context) error {
+        // Ensure the group is public, find and click the first matching element
+        chromedp.ActionFunc(func(ctx context.Context) error {
+            var result string
+            jsCode := fmt.Sprintf(`
+            (function() {
+                function findGroupSection() {
+                    return Array.from(document.querySelectorAll('span')).find(span =>
+                    span.textContent.toLowerCase().includes('public') && (span.textContent.toLowerCase().includes('members') || span.textContent.toLowerCase().includes('people'))
+                    );
+                }
 
-			return b.clickElementWithText(ctx, "people")
-		}),
-	)
-	b.error(err)
+                let publicGroup = findGroupSection();
 
-	b.waitForUserInput()
+                if (!publicGroup) {
+                    return 'Group is not public';
+                }
+
+                let targetText = "%s".toLowerCase(); // This will be dynamic in your actual use case
+                let groupElement = publicGroup.closest('[role="feed"]').querySelectorAll('a[aria-hidden="true"]');
+                let clicked = false;
+
+                for (let i = 0; i < groupElement.length; i++) {
+                    let element = groupElement[i];
+                    if (element.textContent.toLowerCase().includes(targetText)) {
+                        element.click(); // Click the first matching element
+                        clicked = true;
+                        return 'Group clicked';
+                    }
+                }
+
+                if (!clicked) {
+                    return 'No matching group found';
+                }
+            })();
+            `, searchGroup)
+            err := chromedp.Evaluate(jsCode, &result).Do(ctx)
+            if err != nil {
+                log.Printf("Error evaluating JS: %v", err)
+                return err
+            }
+            log.Println(result)
+            return nil
+        }),
+        chromedp.Sleep(10*time.Second),
+        chromedp.ActionFunc(func(ctx context.Context) error {
+            err := b.clickElementWithText(ctx, "people")
+            if err != nil {
+                log.Printf("Error clicking element: %v", err)
+                return err
+            }
+            err = chromedp.Evaluate(`
+            (function() {
+                function addFriendsFromNewToGroupSection() {
+                    console.log("Searching for 'New to the group' section...");
+                    let newGroupSection = Array.from(document.querySelectorAll('div'))
+                        .find(div => div.textContent.includes('New to the group'));
+
+                    if (newGroupSection) {
+                        console.log("'New to the group' section found:", newGroupSection);
+
+                        let addFriendButtons = newGroupSection.querySelectorAll('[aria-label="Add friend"]');
+
+                        console.log("Found 'Add friend' buttons within 'New to the group' section:", addFriendButtons);
+
+                        let adminNames = [];
+
+                        let clicked = 0;
+                        for (let i = 0; i < addFriendButtons.length && clicked < 3; i++) {
+                            let card = addFriendButtons[i].closest('div[role="listitem"]');
+                            if (card) {
+                                let nameElement = card.querySelector('a[role="link"]');
+                                let name = nameElement ? nameElement.textContent.trim() : null;
+
+                                if (card.textContent.includes('Admin')) {
+                                    if (name) {
+                                        adminNames.push(name);
+                                    }
+                                } else {
+                                    if (name && adminNames.includes(name)) {
+                                        // Skipping button because the name is flagged as an Admin
+                                    } else {
+                                        // Clicking button within 'New to the group' section
+                                        addFriendButtons[i].click();
+                                        clicked++;
+                                    }
+                                }
+                            }
+                        }
+                        return {
+                            status: 'Success',
+                            clickedCount: clicked,
+                            adminNames: adminNames
+                        };
+                    } else {
+                        return {
+                            status: 'New to the group section not found'
+                        };
+                    }
+                }
+                window.addFriendsFromNewToGroupSection = addFriendsFromNewToGroupSection;
+            })();
+            `, nil).Do(ctx)
+
+            if err != nil {
+                log.Printf("Error injecting JavaScript: %v", err)
+                return err
+            }
+
+            var result map[string]interface{}
+            err = chromedp.Evaluate(`window.addFriendsFromNewToGroupSection()`, &result).Do(ctx)
+            if err != nil {
+                log.Printf("Error executing JavaScript: %v", err)
+                return err
+            }
+
+            log.Printf("Add Friends Result: %v", result)
+            return nil
+        }),
+    )
+    b.error(err)
+
+    b.waitForUserInput()
 }
+
 
 // clickElementWithText clicks on the element containing the text 'People', case-insensitively
 func (b *Bot) clickElementWithText(ctx context.Context, text string) error {

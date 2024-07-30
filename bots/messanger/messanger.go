@@ -158,84 +158,99 @@ func (b *Bot) navigate_to_group(ctx context.Context) {
             return nil
         }),
         chromedp.Sleep(10*time.Second),
-        chromedp.ActionFunc(func(ctx context.Context) error {
-            err := b.clickElementWithText(ctx, "people")
-            if err != nil {
-                log.Printf("Error clicking element: %v", err)
-                return err
-            }
-            err = chromedp.Evaluate(`
-            (function() {
-                function addFriendsFromNewToGroupSection() {
-                    console.log("Searching for 'New to the group' section...");
-                    let newGroupSection = Array.from(document.querySelectorAll('div'))
-                        .find(div => div.textContent.includes('New to the group'));
-
-                    if (newGroupSection) {
-                        console.log("'New to the group' section found:", newGroupSection);
-
-                        let addFriendButtons = newGroupSection.querySelectorAll('[aria-label="Add friend"]');
-
-                        console.log("Found 'Add friend' buttons within 'New to the group' section:", addFriendButtons);
-
-                        let adminNames = [];
-
-                        let clicked = 0;
-                        for (let i = 0; i < addFriendButtons.length && clicked < 3; i++) {
-                            let card = addFriendButtons[i].closest('div[role="listitem"]');
-                            if (card) {
-                                let nameElement = card.querySelector('a[role="link"]');
-                                let name = nameElement ? nameElement.textContent.trim() : null;
-
-                                if (card.textContent.includes('Admin')) {
-                                    if (name) {
-                                        adminNames.push(name);
-                                    }
-                                } else {
-                                    if (name && adminNames.includes(name)) {
-                                        // Skipping button because the name is flagged as an Admin
-                                    } else {
-                                        // Clicking button within 'New to the group' section
-                                        addFriendButtons[i].click();
-                                        clicked++;
-                                    }
-                                }
-                            }
-                        }
-                        return {
-                            status: 'Success',
-                            clickedCount: clicked,
-                            adminNames: adminNames
-                        };
-                    } else {
-                        return {
-                            status: 'New to the group section not found'
-                        };
-                    }
-                }
-                window.addFriendsFromNewToGroupSection = addFriendsFromNewToGroupSection;
-            })();
-            `, nil).Do(ctx)
-
-            if err != nil {
-                log.Printf("Error injecting JavaScript: %v", err)
-                return err
-            }
-
-            var result map[string]interface{}
-            err = chromedp.Evaluate(`window.addFriendsFromNewToGroupSection()`, &result).Do(ctx)
-            if err != nil {
-                log.Printf("Error executing JavaScript: %v", err)
-                return err
-            }
-
-            log.Printf("Add Friends Result: %v", result)
-            return nil
-        }),
+       b.addFriendsFromNewToGroupSection(ctx),
     )
     b.error(err)
 
     b.waitForUserInput()
+}
+
+func (b *Bot) addFriendsFromNewToGroupSection(ctx context.Context) chromedp.ActionFunc  {
+
+	// Ask the user if they want to send friend requests
+	fmt.Print("Do you want to send friend requests? (yes/y or no/n): ")
+	
+	var response string
+	fmt.Scanln(&response)
+	
+	response = strings.ToLower(strings.TrimSpace(response))
+	
+	if response == "yes" || response == "y" {
+		return chromedp.ActionFunc(func(ctx context.Context) error {
+			// Click the "people" element
+			err := b.clickElementWithText(ctx, "people")
+			if err != nil {
+				log.Printf("Error clicking element: %v", err)
+				return fmt.Errorf("error clicking 'people' element: %w", err)
+			}
+	
+			// Execute the JavaScript to add friends from the "New to the group" section
+			var result map[string]interface{}
+			err = chromedp.Evaluate(`
+				function addFriendsFromNewToGroupSection() {
+					
+					let newGroupSection = Array.from(document.querySelectorAll('div'))
+						.find(div => div.textContent.includes('New to the group'));
+	
+					if (newGroupSection) {
+						
+						let addFriendButtons = newGroupSection.querySelectorAll('[aria-label="Add friend"]');
+						let adminNames = [];
+						let clicked = 0;
+	
+						for (let i = 0; i < addFriendButtons.length ; i++) {
+							let card = addFriendButtons[i].closest('div[role="listitem"]');
+							if (card) {
+								let nameElement = card.querySelector('a[role="link"]');
+								let name = nameElement ? nameElement.textContent.trim() : null;
+	
+								if (card.textContent.includes('Admin')) {
+									if (name) {
+										adminNames.push(name);
+									}
+								} else {
+									if (name && adminNames.includes(name)) {
+										// Skipping button because the name is flagged as an Admin
+									} else {
+										// Clicking button within 'New to the group' section
+										addFriendButtons[i].click();
+										clicked++;
+									}
+								}
+							}
+						}
+						return {
+							status: 'Success',
+							clickedCount: clicked,
+							adminNames: adminNames
+						};
+					} else {
+						return {
+							status: 'New to the group section not found'
+						};
+					}
+				}
+				
+				addFriendsFromNewToGroupSection();
+			`, &result).Do(ctx)
+	
+			if err != nil {
+				log.Printf("Error executing JavaScript: %v", err)
+				return fmt.Errorf("error executing JavaScript: %w", err)
+			}
+	
+			// Log the result of the JavaScript execution
+			log.Printf("Add Friends Result: %v", result)
+	
+			// Return an error if the result indicates failure
+			if result["status"] != "Success" {
+				return fmt.Errorf("failed to add friends: %v", result["status"])
+			}
+	
+			return nil
+		})
+	}
+	return nil
 }
 
 

@@ -188,50 +188,77 @@ func (b *Bot) addFriendsFromNewToGroupSection(ctx context.Context) chromedp.Acti
 			var result map[string]interface{}
 			err = chromedp.Evaluate(`
 				function addFriendsFromNewToGroupSection() {
-					
-					let newGroupSection = Array.from(document.querySelectorAll('div'))
-						.find(div => div.textContent.includes('New to the group'));
-	
-					if (newGroupSection) {
-						
-						let addFriendButtons = newGroupSection.querySelectorAll('[aria-label="Add friend"]');
-						let adminNames = [];
-						let clicked = 0;
-	
-						for (let i = 0; i < addFriendButtons.length ; i++) {
-							let card = addFriendButtons[i].closest('div[role="listitem"]');
-							if (card) {
-								let nameElement = card.querySelector('a[role="link"]');
-								let name = nameElement ? nameElement.textContent.trim() : null;
-	
-								if (card.textContent.includes('Admin')) {
-									if (name) {
-										adminNames.push(name);
-									}
-								} else {
-									if (name && adminNames.includes(name)) {
-										// Skipping button because the name is flagged as an Admin
+					let adminNames = [];
+					let clicked = 0;
+
+					function findAndClickAddFriendButtons() {
+						let newGroupSection = Array.from(document.querySelectorAll('div'))
+							.find(div => div.textContent.includes('New to the group'));
+
+						if (newGroupSection) {
+							let addFriendButtons = newGroupSection.querySelectorAll('[aria-label="Add friend"]');
+							for (let i = 0; i < addFriendButtons.length; i++) {
+								let card = addFriendButtons[i].closest('div[role="listitem"]');
+								if (card) {
+									let nameElement = card.querySelector('a[role="link"]');
+									let name = nameElement ? nameElement.textContent.trim() : null;
+
+									if (card.textContent.includes('Admin')) {
+										if (name) {
+											adminNames.push(name);
+										}
 									} else {
-										// Clicking button within 'New to the group' section
-										addFriendButtons[i].click();
-										clicked++;
+										if (name && adminNames.includes(name)) {
+											// Skipping button because the name is flagged as an Admin
+										} else {
+											// Clicking button within 'New to the group' section
+											addFriendButtons[i].click();
+											clicked++;
+										}
 									}
 								}
 							}
+							return true;
+						} else {
+							return false;
 						}
-						return {
-							status: 'Success',
-							clickedCount: clicked,
-							adminNames: adminNames
-						};
-					} else {
-						return {
-							status: 'New to the group section not found'
-						};
 					}
+
+					function scrollToBottom() {
+						window.scrollTo(0, document.body.scrollHeight);
+					}
+
+					function loadAndClick() {
+						if (findAndClickAddFriendButtons()) {
+							setTimeout(() => {
+								scrollToBottom();
+								setTimeout(() => {
+									if (findAndClickAddFriendButtons()) {
+										loadAndClick();
+									} else {
+										console.log({
+											status: 'Success',
+											clickedCount: clicked,
+											adminNames: adminNames
+										});
+									}
+								}, 2000); // Wait for 2 seconds after scrolling before clicking
+							}, 2000); // Wait for 2 seconds before scrolling again
+						} else {
+							console.log({
+								status: 'New to the group section not found',
+								clickedCount: clicked,
+								adminNames: adminNames
+							});
+						}
+					}
+
+					loadAndClick();
 				}
-				
+
 				addFriendsFromNewToGroupSection();
+
+
 			`, &result).Do(ctx)
 	
 			if err != nil {
@@ -243,9 +270,9 @@ func (b *Bot) addFriendsFromNewToGroupSection(ctx context.Context) chromedp.Acti
 			log.Printf("Add Friends Result: %v", result)
 	
 			// Return an error if the result indicates failure
-			if result["status"] != "Success" {
-				return fmt.Errorf("failed to add friends: %v", result["status"])
-			}
+			// if result["status"] != "Success" {
+			// 	return fmt.Errorf("failed to add friends: %v", result["status"])
+			// }
 	
 			return nil
 		})

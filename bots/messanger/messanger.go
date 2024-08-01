@@ -90,14 +90,48 @@ func (b *Bot) waitForContinue() {
 		}
 	}
 }
+func (b *Bot) sendDirectMessage(ctx context.Context) chromedp.ActionFunc {
 
-func (b *Bot) navigate_to_messanger(ctx context.Context){
+	log.Println("sending direct message")
+
+	return chromedp.ActionFunc(func(ctx context.Context) error {
+		err := chromedp.Evaluate(`
+		function clickTargetElement() {
+			// Select the element with the specific class name
+			const targetElements = document.querySelectorAll('.x1i10hfl.x1qjc9v5.xjbqb8w.xjqpnuy.xa49m3k.xqeqjp1.x2hbi6w.x13fuv20.xu3j5b3.x1q0q8m5.x26u7qi.x972fbf.xcfux6l.x1qhh985.xm0m39n.x9f619.x1ypdohk.xdl72j9.x2lah0s.xe8uvvx.xdj266r.x11i5rnm.xat24cr.x1mh8g0r.x2lwn1j.xeuugli.xexx8yu.x4uap5.x18d9i69.xkhd6sd.x1n2onr6.x16tdsg8.x1hl2dhg.xggy1nq.x1ja2u2z.x1t137rt.x1o1ewxj.x3x9cwd.x1e5q0jg.x13rtm0m.x1q0g3np.x87ps6o.x1lku1pv.x1a2a7pz.x1lliihq');
+
+			// Check if the target element exists
+			if (targetElements.length) {
+				// Click on the target element
+				
+				targetElements.forEach((elem, index) => {
+					if(index == 0) {
+						elem.click();
+					}
+				})
+
+			} else {
+				console.log('Target element not found');
+			}
+		}`, nil).Do(ctx)
+
+		if err != nil {
+			log.Printf("Error executing Send DM JavaScript: %v", err)
+			return err
+
+		}
+		return nil
+	})
+}
+func (b *Bot) navigate_to_messanger(ctx context.Context) {
 	messanagerSvg := "m459.603 1077.948-1.762 2.851a.89.89 0 0 1-1.302.245l-1.402-1.072a.354.354 0 0 0-.433.001l-1.893 1.465c-.253.196-.583-.112-.414-.386l1.763-2.851a.89.89 0 0 1 1.301-.245l1.402 1.072a.354.354 0 0 0 .434-.001l1.893-1.465c.253-.196.582.112.413.386M456 1073.5c-3.38 0-6 2.476-6 5.82 0 1.75.717 3.26 1.884 4.305.099.087.158.21.162.342l.032 1.067a.48.48 0 0 0 .674.425l1.191-.526a.473.473 0 0 1 .32-.024c.548.151 1.13.231 1.737.231 3.38 0 6-2.476 6-5.82 0-3.344-2.62-5.82-6-5.82"
 	b.pause(10)
-    log.Println("Navigating to messanger")
+	log.Println("Navigating to messanger")
 
 	err := chromedp.Run(ctx,
-        b.clickSvgParentElementByPath(messanagerSvg),
+		b.clickSvgParentElementByPath(messanagerSvg),
+		chromedp.Sleep(10*time.Second),
+		b.sendDirectMessage(ctx),
 	)
 	b.error(err)
 	b.waitForUserInput()
@@ -105,32 +139,32 @@ func (b *Bot) navigate_to_messanger(ctx context.Context){
 
 // Navigates to the group and clicks the more SVG once visible
 func (b *Bot) navigate_to_group(ctx context.Context) {
-    moreSvg := "M3.25 2.75a1.25 1.25 0 1 0 0 2.5h17.5a1.25 1.25 0 1 0 0-2.5H3.25zM2 12c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 13.25 2 12zm0 8c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 21.25 2 20.69 2 20z"
+	moreSvg := "M3.25 2.75a1.25 1.25 0 1 0 0 2.5h17.5a1.25 1.25 0 1 0 0-2.5H3.25zM2 12c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 13.25 2 12zm0 8c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 21.25 2 20.69 2 20z"
 
-    b.pause(10)
-    log.Println("Navigating to group")
-    log.Println("Entering group name to the search group, search form")
+	b.pause(10)
+	log.Println("Navigating to group")
+	log.Println("Entering group name to the search group, search form")
 
-    selector := `input[placeholder="Search groups"]`
-    searchGroup := b.env()["SEARCH_GROUP"]
-    err := chromedp.Run(ctx,
-        b.clickSvgParentElementByPath(moreSvg),
-        chromedp.Evaluate(`document.querySelectorAll('span').forEach(element => {
+	selector := `input[placeholder="Search groups"]`
+	searchGroup := b.env()["SEARCH_GROUP"]
+	err := chromedp.Run(ctx,
+		b.clickSvgParentElementByPath(moreSvg),
+		chromedp.Evaluate(`document.querySelectorAll('span').forEach(element => {
             if (element.textContent.trim() === 'Groups') {
                 element.click();
             }
         });`, nil),
-        b.waitVisibleAndSendKeys(selector, searchGroup), // Send the search query
-        chromedp.Sleep(3*time.Second),
-        chromedp.SendKeys(selector, "\n"), // Simulate pressing the Enter key
+		b.waitVisibleAndSendKeys(selector, searchGroup), // Send the search query
+		chromedp.Sleep(3*time.Second),
+		chromedp.SendKeys(selector, "\n"), // Simulate pressing the Enter key
 
-        // Pause for 10 seconds before executing the next action
-        chromedp.Sleep(10*time.Second),
+		// Pause for 10 seconds before executing the next action
+		chromedp.Sleep(10*time.Second),
 
-        // Ensure the group is public, find and click the first matching element
-        chromedp.ActionFunc(func(ctx context.Context) error {
-            var result string
-            jsCode := fmt.Sprintf(`
+		// Ensure the group is public, find and click the first matching element
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			var result string
+			jsCode := fmt.Sprintf(`
             (function() {
                 function findGroupSection() {
                     return Array.from(document.querySelectorAll('span')).find(span =>
@@ -162,32 +196,32 @@ func (b *Bot) navigate_to_group(ctx context.Context) {
                 }
             })();
             `, searchGroup)
-            err := chromedp.Evaluate(jsCode, &result).Do(ctx)
-            if err != nil {
-                log.Printf("Error evaluating JS: %v", err)
-                return err
-            }
-            log.Println(result)
-            return nil
-        }),
-        chromedp.Sleep(10*time.Second),
-       b.addFriendsFromNewToGroupSection(ctx),
-    )
-    b.error(err)
+			err := chromedp.Evaluate(jsCode, &result).Do(ctx)
+			if err != nil {
+				log.Printf("Error evaluating findGroupSection JS: %v", err)
+				return err
+			}
+			log.Println(result)
+			return nil
+		}),
+		chromedp.Sleep(10*time.Second),
+		b.addFriendsFromNewToGroupSection(ctx),
+	)
+	b.error(err)
 
-    b.waitForUserInput()
+	b.waitForUserInput()
 }
 
-func (b *Bot) addFriendsFromNewToGroupSection(ctx context.Context) chromedp.ActionFunc  {
+func (b *Bot) addFriendsFromNewToGroupSection(ctx context.Context) chromedp.ActionFunc {
 
 	// Ask the user if they want to send friend requests
 	fmt.Print("Do you want to send friend requests? (yes/y or no/n): ")
-	
+
 	var response string
 	fmt.Scanln(&response)
-	
+
 	response = strings.ToLower(strings.TrimSpace(response))
-	
+
 	if response == "yes" || response == "y" {
 		return chromedp.ActionFunc(func(ctx context.Context) error {
 			// Click the "people" element
@@ -196,7 +230,7 @@ func (b *Bot) addFriendsFromNewToGroupSection(ctx context.Context) chromedp.Acti
 				log.Printf("Error clicking element: %v", err)
 				return fmt.Errorf("error clicking 'people' element: %w", err)
 			}
-	
+
 			// Execute the JavaScript to add friends from the "New to the group" section
 			var result map[string]interface{}
 			err = chromedp.Evaluate(`
@@ -273,26 +307,17 @@ func (b *Bot) addFriendsFromNewToGroupSection(ctx context.Context) chromedp.Acti
 
 
 			`, &result).Do(ctx)
-	
+
 			if err != nil {
-				log.Printf("Error executing JavaScript: %v", err)
-				return fmt.Errorf("error executing JavaScript: %w", err)
+				log.Printf("Error executing addFriendsFromNewToGroupSection JavaScript: %v", err)
+				return err
 			}
-	
-			// Log the result of the JavaScript execution
-			log.Printf("Add Friends Result: %v", result)
-	
-			// Return an error if the result indicates failure
-			// if result["status"] != "Success" {
-			// 	return fmt.Errorf("failed to add friends: %v", result["status"])
-			// }
-	
+
 			return nil
 		})
 	}
 	return nil
 }
-
 
 // clickElementWithText clicks on the element containing the text 'People', case-insensitively
 func (b *Bot) clickElementWithText(ctx context.Context, text string) error {
@@ -329,7 +354,7 @@ func (b *Bot) clickElementWithText(ctx context.Context, text string) error {
 	// Evaluate the JavaScript code
 	err := chromedp.Evaluate(jsCode, &result).Do(ctx)
 	if err != nil {
-		log.Printf("Error evaluating JS: %v", err)
+		log.Printf("Error evaluating clickElementWithText JS: %v", err)
 		return err
 	}
 
@@ -369,7 +394,7 @@ func (b *Bot) findElementAndScrollIntoView(ctx context.Context, text string) err
 	b.pause(10)
 	err := chromedp.Evaluate(jsCode, &result).Do(ctx)
 	if err != nil {
-		log.Printf("Error evaluating JS: %v", err)
+		log.Printf("Error evaluating findElementAndScrollIntoView JS: %v", err)
 		return err
 	}
 

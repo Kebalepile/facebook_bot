@@ -64,76 +64,18 @@ func (b *Bot) endUserMessage() (string, error) {
 	log.Printf("%v: Enter text to be sent via messenger chat", b.Name)
 	reader := bufio.NewReader(os.Stdin)
 
-	for {
-		input, err := reader.ReadString('\n')
-		if err != nil {
-			log.Println("Error reading input:", err)
-			continue
-		}
-		input = strings.TrimSpace(input)
-		if len(input) > 0 {
-			return input, nil
-		} else {
-			log.Println("Invalid input. Type your message and press Enter to proceed...")
-		}
-	}
-}
-
-// Send a direct message
-func (b *Bot) sendDirectMessage() (string, error) {
-	b.pause(10)
-	log.Println("sending direct message")
-
-	textMessage, err := b.endUserMessage()
+	input, err := reader.ReadString('\n')
 	if err != nil {
-		return "",fmt.Errorf("error getting user message: %v", err)
+		log.Println("Error reading input:", err)
+		return "", err
 	}
-	
-	jsCode := fmt.Sprintf(`
-		function clickTargetElement() {
-			const targetElements = document.querySelectorAll('.x1i10hfl.x1qjc9v5.xjbqb8w.xjqpnuy.xa49m3k.xqeqjp1.x2hbi6w.x13fuv20.xu3j5b3.x1q0q8m5.x26u7qi.x972fbf.xcfux6l.x1qhh985.xm0m39n.x9f619.x1ypdohk.xdl72j9.x2lah0s.xe8uvvx.xdj266r.x11i5rnm.xat24cr.x1mh8g0r.x2lwn1j.xeuugli.xexx8yu.x4uap5.x18d9i69.xkhd6sd.x1n2onr6.x16tdsg8.x1hl2dhg.xggy1nq.x1ja2u2z.x1t137rt.x1o1ewxj.x3x9cwd.x1e5q0jg.x13rtm0m.x1q0g3np.x87ps6o.x1lku1pv.x1a2a7pz.x1lliihq');
-	
-			if (targetElements.length) {
-				targetElements[0].click();
-				setTimeout(() => {
-					const editableDiv = document.querySelector('div[aria-describedby^="Write to "][aria-label="Message"][contenteditable="true"]');
-					if (editableDiv) {
-						editableDiv.focus();
-						
-						const span = document.createElement('span');
-						span.setAttribute('data-lexical-text', 'true');
-						span.innerText = "%s";
-						
-						editableDiv.appendChild(span);
-						
-						const enterEvent = new KeyboardEvent('keydown', {
-							key: 'Enter',
-							keyCode: 13,
-							which: 13,
-							bubbles: true,
-							cancelable: true
-						});
-						editableDiv.dispatchEvent(enterEvent);
-
-						const path = "m98.095 917.155 7.75 7.75a.75.75 0 0 0 1.06-1.06l-7.75-7.75a.75.75 0 0 0-1.06 1.06z";
-						const nodes = document.body.querySelectorAll("svg path");
-						nodes.forEach(n => {
-							const pathAttr = n.getAttribute("d");
-							if (pathAttr === path) {
-								const parentElement = n.parentElement.parentElement;
-								parentElement.click();
-							}
-						});
-					}
-				}, 5000);
-			} else {
-				console.log('Target element not found');
-			}
-		}
-		clickTargetElement();
-	`, textMessage)
-
-	return jsCode, nil
+	input = strings.TrimSpace(input)
+	if len(input) > 0 {
+		return input, nil
+	} else {
+		log.Println("Invalid input. Type your message and press Enter to proceed...")
+		return b.endUserMessage()
+	}
 
 }
 
@@ -142,18 +84,49 @@ func (b *Bot) navigate_to_messenger(ctx context.Context) {
 
 	b.pause(10)
 	log.Println("Navigating to messenger")
-	
-	jsCode, err := b.sendDirectMessage()
+
+	textMessage, err := b.endUserMessage()
 	b.error(err)
+	jsCode := fmt.Sprintf(`
+		function clickTargetElement() {
+			const targetElements = document.querySelectorAll('.x1i10hfl.x1qjc9v5.xjbqb8w.xjqpnuy.xa49m3k.xqeqjp1.x2hbi6w.x13fuv20.xu3j5b3.x1q0q8m5.x26u7qi.x972fbf.xcfux6l.x1qhh985.xm0m39n.x9f619.x1ypdohk.xdl72j9.x2lah0s.xe8uvvx.xdj266r.x11i5rnm.xat24cr.x1mh8g0r.x2lwn1j.xeuugli.xexx8yu.x4uap5.x18d9i69.xkhd6sd.x1n2onr6.x16tdsg8.x1hl2dhg.xggy1nq.x1ja2u2z.x1t137rt.x1o1ewxj.x3x9cwd.x1e5q0jg.x13rtm0m.x1q0g3np.x87ps6o.x1lku1pv.x1a2a7pz.x1lliihq');
 	
-	var result string
+			if (targetElements.length) {
+				targetElements[0].click();
+				
+					// const editableDiv = document.querySelector('div[aria-describedby^="Write to "][aria-label="Message"][contenteditable="true"]');
+					// if (editableDiv) {
+					// 	editableDiv.focus();
+						
+					// 	const span = document.createElement('span');
+					// 	span.setAttribute('data-lexical-text', 'true');
+					// 	span.innerText = %q;
+						
+					// 	editableDiv.appendChild(span);
+						
+					// 	const enterEvent = new KeyboardEvent('keydown', {
+					// 		key: 'Enter',
+					// 		keyCode: 13,
+					// 		which: 13,
+					// 		bubbles: true,
+					// 		cancelable: true
+					// 	});
+					// 	editableDiv.dispatchEvent(enterEvent);	
+					// }
+			} else {
+				console.log('Target element not found');
+			}
+		}
+		clickTargetElement();
+	`, textMessage)
+
 	err = chromedp.Run(ctx,
 		b.clickSvgParentElementByPath(messengerSvg),
-		chromedp.Evaluate(jsCode, &result),
+		chromedp.Evaluate(jsCode, nil),
 		b.clickSvgParentElementByPath("m98.095 917.155 7.75 7.75a.75.75 0 0 0 1.06-1.06l-7.75-7.75a.75.75 0 0 0-1.06 1.06z"),
 	)
 	b.error(err)
-	log.Println(result)
+
 	b.waitForUserInput()
 }
 
@@ -476,23 +449,23 @@ func (b *Bot) waitForContinue() {
 
 	reader := bufio.NewReader(os.Stdin)
 
-	for {
-		input, err := reader.ReadString('\n')
-		if err != nil {
-			log.Println("Error reading input:", err)
-			continue
-		}
-
-		// Trim any whitespace or newline characters from the input
-		input = strings.TrimSpace(input)
-
-		// Check if the input is "continue"
-		if input == "continue" {
-			break
-		} else {
-			log.Println("Invalid input. Type 'continue' and press Enter to proceed...")
-		}
+	input, err := reader.ReadString('\n')
+	if err != nil {
+		log.Println("Error reading input:", err)
+		return
 	}
+
+	// Trim any whitespace or newline characters from the input
+	input = strings.TrimSpace(input)
+
+	// Check if the input is "continue"
+	if input == "continue" {
+		return
+	} else {
+		log.Println("Invalid input. Type 'continue' and press Enter to proceed...")
+		b.waitForContinue()
+	}
+
 }
 
 // Pause execution for a specified number of seconds
@@ -506,21 +479,22 @@ func (b *Bot) waitForUserInput() {
 
 	reader := bufio.NewReader(os.Stdin)
 
-	for {
-		input, err := reader.ReadString('\n')
-		if err != nil {
-			log.Printf("Error reading input: %v", err)
-			continue
-		}
+	input, err := reader.ReadString('\n')
+	if err != nil {
+		log.Printf("Error reading input: %v", err)
+		return
 
-		input = strings.TrimSpace(input)
-
-		if input == "e" || input == "exit" {
-			break
-		} else {
-			log.Println("Invalid input. Type 'e' or 'exit' and press Enter to exit...")
-		}
 	}
+
+	input = strings.TrimSpace(input)
+
+	if input == "e" || input == "exit" {
+		return
+	} else {
+		log.Println("Invalid input. Type 'e' or 'exit' and press Enter to exit...")
+		b.waitForUserInput()
+	}
+
 }
 
 // Read .env variables to be used

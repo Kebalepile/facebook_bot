@@ -94,7 +94,7 @@ func (b *Bot) sendDirectMessage(ctx context.Context) chromedp.ActionFunc {
     
 	 textMessage, err := b.endUserMessage()
 	 b.error(err)
-
+	 
 	jsCode := fmt.Sprintf(`
 		function clickTargetElement() {
 			// Select the element with the specific class name

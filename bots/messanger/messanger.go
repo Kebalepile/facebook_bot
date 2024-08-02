@@ -94,25 +94,25 @@ func (b *Bot) navigate_to_messenger(ctx context.Context) {
 			if (targetElements.length) {
 				targetElements[0].click();
 				
-					// const editableDiv = document.querySelector('div[aria-describedby^="Write to "][aria-label="Message"][contenteditable="true"]');
-					// if (editableDiv) {
-					// 	editableDiv.focus();
+					const editableDiv = document.querySelector('div[aria-describedby^="Write to "][aria-label="Message"][contenteditable="true"]');
+					if (editableDiv) {
+						editableDiv.focus();
 						
-					// 	const span = document.createElement('span');
-					// 	span.setAttribute('data-lexical-text', 'true');
-					// 	span.innerText = %q;
+						const span = document.createElement('span');
+						span.setAttribute('data-lexical-text', 'true');
+						span.innerText = %q;
 						
-					// 	editableDiv.appendChild(span);
+						editableDiv.appendChild(span);
 						
-					// 	const enterEvent = new KeyboardEvent('keydown', {
-					// 		key: 'Enter',
-					// 		keyCode: 13,
-					// 		which: 13,
-					// 		bubbles: true,
-					// 		cancelable: true
-					// 	});
-					// 	editableDiv.dispatchEvent(enterEvent);	
-					// }
+						const enterEvent = new KeyboardEvent('keydown', {
+							key: 'Enter',
+							keyCode: 13,
+							which: 13,
+							bubbles: true,
+							cancelable: true
+						});
+						editableDiv.dispatchEvent(enterEvent);	
+					}
 			} else {
 				console.log('Target element not found');
 			}

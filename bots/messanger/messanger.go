@@ -61,66 +61,51 @@ func (b *Bot) Run(wg *sync.WaitGroup) {
 }
 
 func (b *Bot) endUserMessage() (string, error) {
-	// Wait for user to type 'continue' and press Enter
-
 	log.Printf("%v: Enter text to be sent via messenger chat", b.Name)
-
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
 		input, err := reader.ReadString('\n')
-
 		if err != nil {
 			log.Println("Error reading input:", err)
 			continue
 		}
-
-		// Trim any whitespace or newline characters from the input
 		input = strings.TrimSpace(input)
-
-		// Check if the input is "continue"
 		if len(input) > 0 {
 			return input, nil
 		} else {
-			log.Println("Invalid input. Type 'continue' and press Enter to proceed...")
+			log.Println("Invalid input. Type your message and press Enter to proceed...")
 		}
 	}
 }
 
 // Send a direct message
-func (b *Bot) sendDirectMessage(ctx context.Context) chromedp.ActionFunc {
+func (b *Bot) sendDirectMessage() (string, error) {
 	b.pause(10)
 	log.Println("sending direct message")
-    
-	 textMessage, err := b.endUserMessage()
-	 b.error(err)
-	 
+
+	textMessage, err := b.endUserMessage()
+	if err != nil {
+		return "",fmt.Errorf("error getting user message: %v", err)
+	}
+	
 	jsCode := fmt.Sprintf(`
 		function clickTargetElement() {
-			// Select the element with the specific class name
 			const targetElements = document.querySelectorAll('.x1i10hfl.x1qjc9v5.xjbqb8w.xjqpnuy.xa49m3k.xqeqjp1.x2hbi6w.x13fuv20.xu3j5b3.x1q0q8m5.x26u7qi.x972fbf.xcfux6l.x1qhh985.xm0m39n.x9f619.x1ypdohk.xdl72j9.x2lah0s.xe8uvvx.xdj266r.x11i5rnm.xat24cr.x1mh8g0r.x2lwn1j.xeuugli.xexx8yu.x4uap5.x18d9i69.xkhd6sd.x1n2onr6.x16tdsg8.x1hl2dhg.xggy1nq.x1ja2u2z.x1t137rt.x1o1ewxj.x3x9cwd.x1e5q0jg.x13rtm0m.x1q0g3np.x87ps6o.x1lku1pv.x1a2a7pz.x1lliihq');
-
-			// Check if the target element exists
+	
 			if (targetElements.length) {
-				// targetElements.forEach(elem => elem.click());
 				targetElements[0].click();
-				setTimout(() => {
-				   // Select the contenteditable div using a partial match for aria-describedby
+				setTimeout(() => {
 					const editableDiv = document.querySelector('div[aria-describedby^="Write to "][aria-label="Message"][contenteditable="true"]');
-					
-					// Check if the element exists
 					if (editableDiv) {
-						// Focus on the contenteditable div
 						editableDiv.focus();
 						
-						// Create a span element with data-lexical-text attribute
 						const span = document.createElement('span');
 						span.setAttribute('data-lexical-text', 'true');
-						span.innerText = %q; // Set the text content of the span
+						span.innerText = "%s";
 						
-						// Append the span to the contenteditable div
 						editableDiv.appendChild(span);
-						// Create and dispatch an Enter key event
+						
 						const enterEvent = new KeyboardEvent('keydown', {
 							key: 'Enter',
 							keyCode: 13,
@@ -139,23 +124,17 @@ func (b *Bot) sendDirectMessage(ctx context.Context) chromedp.ActionFunc {
 								parentElement.click();
 							}
 						});
-				},5000)
+					}
+				}, 5000);
 			} else {
 				console.log('Target element not found');
 			}
 		}
 		clickTargetElement();
-		`, textMessage)
+	`, textMessage)
 
-	return chromedp.ActionFunc(func(ctx context.Context) error {
-		err := chromedp.Evaluate(jsCode, nil).Do(ctx)
+	return jsCode, nil
 
-		if err != nil {
-			log.Printf("Error executing Send DM JavaScript: %v", err)
-			return err
-		}
-		return nil
-	})
 }
 
 func (b *Bot) navigate_to_messenger(ctx context.Context) {
@@ -163,12 +142,18 @@ func (b *Bot) navigate_to_messenger(ctx context.Context) {
 
 	b.pause(10)
 	log.Println("Navigating to messenger")
-
-	err := chromedp.Run(ctx,
+	
+	jsCode, err := b.sendDirectMessage()
+	b.error(err)
+	
+	var result string
+	err = chromedp.Run(ctx,
 		b.clickSvgParentElementByPath(messengerSvg),
-		b.sendDirectMessage(ctx),
+		chromedp.Evaluate(jsCode, &result),
+		b.clickSvgParentElementByPath("m98.095 917.155 7.75 7.75a.75.75 0 0 0 1.06-1.06l-7.75-7.75a.75.75 0 0 0-1.06 1.06z"),
 	)
 	b.error(err)
+	log.Println(result)
 	b.waitForUserInput()
 }
 

@@ -87,48 +87,114 @@ func (b *Bot) navigate_to_messenger(ctx context.Context) {
 
 	textMessage, err := b.endUserMessage()
 	b.error(err)
-	jsCode := fmt.Sprintf(`
+	escapedTextMessage := fmt.Sprintf("%q", textMessage) // Properly escape the text message for JS
+
+	// First part: Click the target element
+	jsCodePart1 := `
 		function clickTargetElement() {
 			const targetElements = document.querySelectorAll('.x1i10hfl.x1qjc9v5.xjbqb8w.xjqpnuy.xa49m3k.xqeqjp1.x2hbi6w.x13fuv20.xu3j5b3.x1q0q8m5.x26u7qi.x972fbf.xcfux6l.x1qhh985.xm0m39n.x9f619.x1ypdohk.xdl72j9.x2lah0s.xe8uvvx.xdj266r.x11i5rnm.xat24cr.x1mh8g0r.x2lwn1j.xeuugli.xexx8yu.x4uap5.x18d9i69.xkhd6sd.x1n2onr6.x16tdsg8.x1hl2dhg.xggy1nq.x1ja2u2z.x1t137rt.x1o1ewxj.x3x9cwd.x1e5q0jg.x13rtm0m.x1q0g3np.x87ps6o.x1lku1pv.x1a2a7pz.x1lliihq');
-	
 			if (targetElements.length) {
 				targetElements[0].click();
-				
-					const editableDiv = document.querySelector('div[aria-describedby^="Write to "][aria-label="Message"][contenteditable="true"]');
-					if (editableDiv) {
-						editableDiv.focus();
-						
-						const span = document.createElement('span');
-						span.setAttribute('data-lexical-text', 'true');
-						span.innerText = %q;
-						
-						editableDiv.appendChild(span);
-						
-						const enterEvent = new KeyboardEvent('keydown', {
-							key: 'Enter',
-							keyCode: 13,
-							which: 13,
-							bubbles: true,
-							cancelable: true
-						});
-						editableDiv.dispatchEvent(enterEvent);	
-					}
+				return 'Target element clicked';
 			} else {
-				console.log('Target element not found');
+				return 'Target element not found';
 			}
 		}
 		clickTargetElement();
-	`, textMessage)
+	`
 
+	// Second part: Insert text into the chatbox
+	jsCodePart2 := fmt.Sprintf(`
+		function simulateTyping(text) {
+			const selection = window.getSelection();
+			const activeElement = document.activeElement;
+			const contentEditableElement = activeElement.closest('[contenteditable="true"]');
+			if (!contentEditableElement) {
+				console.error('No contenteditable element found.');
+				return 'No contenteditable element found.';
+			}
+			contentEditableElement.focus();
+
+			for (let i = 0; i < text.length; i++) {
+				const char = text[i];
+
+				// Create keydown event
+				const keydownEvent = new KeyboardEvent('keydown', {
+					key: char,
+					keyCode: char.charCodeAt(0),
+					which: char.charCodeAt(0),
+					bubbles: true,
+					cancelable: true
+				});
+				contentEditableElement.dispatchEvent(keydownEvent);
+
+				// Create keypress event
+				const keypressEvent = new KeyboardEvent('keypress', {
+					key: char,
+					keyCode: char.charCodeAt(0),
+					which: char.charCodeAt(0),
+					bubbles: true,
+					cancelable: true
+				});
+				contentEditableElement.dispatchEvent(keypressEvent);
+
+				// Insert character into the contenteditable element
+				const textNode = document.createTextNode(char);
+				const range = selection.getRangeAt(0);
+				range.insertNode(textNode);
+				range.setStartAfter(textNode);
+				range.setEndAfter(textNode);
+				selection.removeAllRanges();
+				selection.addRange(range);
+
+				// Create keyup event
+				const keyupEvent = new KeyboardEvent('keyup', {
+					key: char,
+					keyCode: char.charCodeAt(0),
+					which: char.charCodeAt(0),
+					bubbles: true,
+					cancelable: true
+				});
+				contentEditableElement.dispatchEvent(keyupEvent);
+			}
+
+			// Dispatch the Enter key event to send the message
+			const enterEvent = new KeyboardEvent('keydown', {
+				key: 'Enter',
+				keyCode: 13,
+				which: 13,
+				bubbles: true,
+				cancelable: true
+			});
+			contentEditableElement.dispatchEvent(enterEvent);
+
+			return 'Text typed and Enter key dispatched';
+		}
+
+		simulateTyping(%q);
+`, escapedTextMessage)
+
+	var result1, result2 string
 	err = chromedp.Run(ctx,
 		b.clickSvgParentElementByPath(messengerSvg),
-		chromedp.Evaluate(jsCode, nil),
-		b.clickSvgParentElementByPath("m98.095 917.155 7.75 7.75a.75.75 0 0 0 1.06-1.06l-7.75-7.75a.75.75 0 0 0-1.06 1.06z"),
+		chromedp.Evaluate(jsCodePart1, &result1),
 	)
 	b.error(err)
+	log.Println(result1)
+
+	// Pause for 5 seconds to ensure the chatbox is fully loaded
+	b.pause(10)
+
+	err = chromedp.Run(ctx,
+		chromedp.Evaluate(jsCodePart2, &result2),
+	)
+	b.error(err)
+	log.Println(result2)
 
 	b.waitForUserInput()
 }
+
+// b.clickSvgParentElementByPath("m98.095 917.155 7.75 7.75a.75.75 0 0 0 1.06-1.06l-7.75-7.75a.75.75 0 0 0-1.06 1.06z"),
 
 func (b *Bot) error(err error) {
 	if err != nil {
@@ -355,6 +421,23 @@ func (b *Bot) clickSvgParentElementByPath(pathValue string) chromedp.Tasks {
 			}
 			return nil
 		}),
+		//  var a = () => {
+		//  	const nodes = Array.from(document.body.querySelectorAll("svg path"));
+		//  	return nodes.filter(n => {
+		//  		const pathAttr = n.getAttribute("d");
+		//  		const pathValue = "M460.25 1079a.75.75 0 0 1 0 1.5h-.75v1.25a.75.75 0 0 1-1.5 0v-4.5a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-.75v1h.75zm-2.75 2.75a.75.75 0 0 1-1.5 0v-4.5a.75.75 0 0 1 1.5 0v4.5zm-2-.623a.747.747 0 0 1-.166.471c-.47.582-1.104.902-1.785.902-1.405 0-2.627-1.345-2.627-3s1.221-3 2.627-3a2.2 2.2 0 0 1 1.415.526.75.75 0 0 1-.957 1.155.713.713 0 0 0-.458-.181c-.495 0-1.049.641-1.049 1.5s.553 1.5 1.049 1.5a.716.716 0 0 0 .451-.177v-1.19a.75.75 0 0 1 1.5 0v1.494zm6.44-3.272c-.067-.835-.145-1.332-.416-1.916a3.458 3.458 0 0 0-1.58-1.505l-.026-.008c-.475-.213-.917-.276-1.792-.345a28.09 28.09 0 0 0-4.253 0c-.769.06-1.279.116-1.883.381a3.465 3.465 0 0 0-1.542 1.537l-.012.034c-.235.499-.309.985-.376 1.825a25.389 25.389 0 0 0 0 3.287c.067.836.146 1.334.416 1.916.326.629.884 1.17 1.532 1.486a.597.597 0 0 0 .049.02l.024.007c.476.213.918.276 1.793.345a28.103 28.103 0 0 0 4.253 0c.768-.06 1.278-.116 1.883-.381a3.469 3.469 0 0 0 1.542-1.538l.012-.034c.235-.497.308-.983.376-1.824.072-.936.072-2.349 0-3.285v-.002z"
+
+		//  		if(pathAttr == pathValue){
+		//  			console.log("found node")
+		//  			const parent = n.parentElement.parentElement;
+		// 			console.log(parent)
+		//             console.log(parent.nextElementSibling)
+		// 			return parent
+		//  		}
+
+		//  	})
+
+		//  };
 	}
 }
 

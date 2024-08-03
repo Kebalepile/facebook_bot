@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/Kebalepile/facebook_bot/bots/messanger"
+	"github.com/Kebalepile/facebook_bot/bots/messenger"
 	"github.com/Kebalepile/facebook_bot/hooks/types"
 	"log"
 	"sync"

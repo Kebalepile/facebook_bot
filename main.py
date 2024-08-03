@@ -175,7 +175,12 @@ class Bot:
 
 
         # Locate the contenteditable element
-        contenteditable_element = self.driver.find_element(By.CSS_SELECTOR, '[contenteditable="true"]')
+        wait = WebDriverWait(self.driver, 10)
+        contenteditable_element = wait.until(
+            EC.presence_of_element_located(
+                (By.CSS_SELECTOR, 'div[aria-label="Message"][contenteditable="true"][data-lexical-editor="true"]')
+            )
+        )
         # Type text into the contenteditable element
         text_message = self.end_user_message()
         escaped_text_message = text_message.replace('"', '\\"')
@@ -184,6 +189,11 @@ class Bot:
 
         # Simulate pressing the "Enter" key
         contenteditable_element.send_keys(Keys.ENTER)
+        # Close chatbox
+        self.pause(5)
+        logging.info("closing chatbox")
+        self.click_svg_parent_element_by_path("m98.095 917.155 7.75 7.75a.75.75 0 0 0 1.06-1.06l-7.75-7.75a.75.75 0 0 0-1.06 1.06z")
+
         # self.wait_for_continue()
         self.wait_for_user_input()
 

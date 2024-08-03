@@ -56,8 +56,8 @@ class Bot:
         # self.wait_for_continue()
 
         # Handle alerts
-        # self.navigate_to_messenger()
-        self.navigate_to_group()
+        self.navigate_to_messenger()
+        # self.navigate_to_group()
 
     def wait_visible_and_send_keys(self, selector, keys):
         try:
@@ -206,14 +206,20 @@ class Bot:
     def navigate_to_group(self):
 
         more_svg = "M3.25 2.75a1.25 1.25 0 1 0 0 2.5h17.5a1.25 1.25 0 1 0 0-2.5H3.25zM2 12c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 13.25 2 12zm0 8c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 21.25 2 20.69 2 20z"
+        # Click the SVG element
+        self.pause(10)
+        self.click_svg_parent_element_by_path(more_svg)
 
         logging.info("Navigating to group")
         logging.info("Entering group name to the search group, search form")
-
         selector = 'input[placeholder="Search groups"]'
-
-        # Click the SVG element
-        self.click_svg_parent_element_by_path(more_svg)
+        
+        # Wait for the search input to be visible and send the search query
+        # Load the .env variables
+        env_vars = self.load_env()
+        # Get email and password from .env
+        search_group = env_vars["SEARCH_GROUP"]
+        self.wait_visible_and_send_keys(selector, search_group)
 
         # Click the "Groups" span
         self.evaluate_javascript("""
@@ -223,14 +229,6 @@ class Bot:
                 }
             });
         """)
-
-        # Wait for the search input to be visible and send the search query
-        # Load the .env variables
-        env_vars = self.load_env()
-
-        # Get email and password from .env
-        search_group = env_vars["SEARCH_GROUP"]
-        self.wait_visible_and_send_keys(selector, search_group)
 
         # Simulate pressing the "Enter" key
         input_element = self.driver.find_element(By.CSS_SELECTOR, selector)

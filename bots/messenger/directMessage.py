@@ -52,7 +52,8 @@ class Bot:
         # self.wait_for_continue()
 
         # Handle alerts
-        self.navigate_to_messenger()
+        # self.navigate_to_messenger()
+        self.navigate_to_group()
 
     def wait_visible_and_send_keys(self, selector, keys):
         try:
@@ -168,17 +169,17 @@ class Bot:
         '''
 
         logging.info("Clicking Messenger icon")
-        # self.click_element_with_text("Messenger")
+       
         self.click_svg_parent_element_by_path(messenger_svg)
         self.driver.execute_script(js_code_part1)
         self.pause(10)
-
 
         # Locate the contenteditable element
         wait = WebDriverWait(self.driver, 10)
         contenteditable_element = wait.until(
             EC.presence_of_element_located(
-                (By.CSS_SELECTOR, 'div[aria-label="Message"][contenteditable="true"][data-lexical-editor="true"]')
+                (By.CSS_SELECTOR,
+                 'div[aria-label="Message"][contenteditable="true"][data-lexical-editor="true"]')
             )
         )
         # Type text into the contenteditable element
@@ -192,10 +193,91 @@ class Bot:
         # Close chatbox
         self.pause(5)
         logging.info("closing chatbox")
-        self.click_svg_parent_element_by_path("m98.095 917.155 7.75 7.75a.75.75 0 0 0 1.06-1.06l-7.75-7.75a.75.75 0 0 0-1.06 1.06z")
+        self.click_svg_parent_element_by_path(
+            "m98.095 917.155 7.75 7.75a.75.75 0 0 0 1.06-1.06l-7.75-7.75a.75.75 0 0 0-1.06 1.06z")
 
         # self.wait_for_continue()
         self.wait_for_user_input()
+
+    def navigate_to_group(self):
+
+        more_svg = "M3.25 2.75a1.25 1.25 0 1 0 0 2.5h17.5a1.25 1.25 0 1 0 0-2.5H3.25zM2 12c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 13.25 2 12zm0 8c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 21.25 2 20.69 2 20z"
+
+        self.pause(10)
+        logging.info("Navigating to group")
+        logging.info("Entering group name to the search group, search form")
+
+        selector = 'input[placeholder="Search groups"]'
+
+        # Click the SVG element
+        self.click_svg_parent_element_by_path(more_svg)
+
+        # Click the "Groups" span
+        self.evaluate_javascript("""
+            document.querySelectorAll('span').forEach(element => {
+                if (element.textContent.trim() === 'Groups') {
+                    element.click();
+                }
+            });
+        """)
+
+        # Wait for the search input to be visible and send the search query
+        # Load the .env variables
+        env_vars = self.load_env()
+
+        # Get email and password from .env
+        search_group = env_vars["SEARCH_GROUP"]
+        self.wait_visible_and_send_keys(selector, search_group)
+
+        # Simulate pressing the "Enter" key
+        input_element = self.driver.find_element(By.CSS_SELECTOR, selector)
+        input_element.send_keys(Keys.ENTER)
+
+        # Pause for 10 seconds
+        self.pause(10)
+
+        # Ensure the group is public, find and click the first matching element
+        result = self.evaluate_javascript(f"""
+            (function() {{
+                function findGroupSection() {{
+                    return Array.from(document.querySelectorAll('span')).find(span =>
+                        span.textContent.toLowerCase().includes('public') && 
+                        (span.textContent.toLowerCase().includes('members') || span.textContent.toLowerCase().includes('people'))
+                    );
+                }}
+
+                let publicGroup = findGroupSection();
+
+                if (!publicGroup) {{
+                    return 'Group is not public';
+                }}
+
+                let targetText = '{search_group}'.toLowerCase(); // This will be dynamic in your actual use case
+                let groupElement = publicGroup.closest('[role="feed"]').querySelectorAll('a[aria-hidden="true"]');
+                let clicked = false;
+
+                for (let i = 0; i < groupElement.length; i++) {{
+                    let element = groupElement[i];
+                    if (element.textContent.toLowerCase().includes(targetText)) {{
+                        element.click(); // Click the first matching element
+                        clicked = true;
+                        return 'Group clicked';
+                    }}
+                }}
+
+                if (!clicked) {{
+                    return 'No matching group found';
+                }}
+            }})();
+        """)
+
+        logging.info(result)
+
+        # Pause for 10 seconds
+        self.pause(10)
+
+        # Placeholder for adding friends from the new group section
+        # add_friends_from_new_to_group_section()
 
     def end_user_message(self):
         message = input("Type your message here: ")
@@ -238,5 +320,92 @@ class Bot:
                 logging.info(
                     "Invalid input. Type 'e' or 'exit' and press Enter to exit...")
 
+    def evaluate_javascript(self, script):
+        return self.driver.execute_script(script)
 
+    def ask_user_for_friend_requests(self):
+        response = input(
+            "Do you want to send friend requests? (yes/y or no/n): ").strip().lower()
+        return response in ["yes", "y"]
 
+    def add_friends_from_new_to_group_section(self):
+        if self.ask_user_for_friend_requests():
+            try:
+                # Click the "people" element
+                self.click_element_with_text("people")
+
+                # Execute the JavaScript to add friends from the "New to the group" section
+                script = """
+                (function() {
+                    let adminNames = [];
+                    let clicked = 0;
+
+                    function findAndClickAddFriendButtons() {
+                        let newGroupSection = Array.from(document.querySelectorAll('div'))
+                            .find(div => div.textContent.includes('New to the group'));
+
+                        if (newGroupSection) {
+                            let addFriendButtons = newGroupSection.querySelectorAll('[aria-label="Add friend"]');
+                            for (let i = 0; i < addFriendButtons.length; i++) {
+                                let card = addFriendButtons[i].closest('div[role="listitem"]');
+                                if (card) {
+                                    let nameElement = card.querySelector('a[role="link"]');
+                                    let name = nameElement ? nameElement.textContent.trim() : null;
+
+                                    if (card.textContent.includes('Admin')) {
+                                        if (name) {
+                                            adminNames.push(name);
+                                        }
+                                    } else {
+                                        if (name && adminNames.includes(name)) {
+                                            // Skipping button because the name is flagged as an Admin
+                                        } else {
+                                            // Clicking button within 'New to the group' section
+                                            addFriendButtons[i].click();
+                                            clicked++;
+                                        }
+                                    }
+                                }
+                            }
+                            return true;
+                        } else {
+                            return false;
+                        }
+                    }
+
+                    function scrollToBottom() {
+                        window.scrollTo(0, document.body.scrollHeight);
+                    }
+
+                    function loadAndClick() {
+                        if (findAndClickAddFriendButtons()) {
+                            setTimeout(() => {
+                                scrollToBottom();
+                                setTimeout(() => {
+                                    if (findAndClickAddFriendButtons()) {
+                                        loadAndClick();
+                                    } else {
+                                        console.log({
+                                            status: 'Success',
+                                            clickedCount: clicked,
+                                            adminNames: adminNames
+                                        });
+                                    }
+                                }, 2000); // Wait for 2 seconds after scrolling before clicking
+                            }, 2000); // Wait for 2 seconds before scrolling again
+                        } else {
+                            console.log({
+                                status: 'New to the group section not found',
+                                clickedCount: clicked,
+                                adminNames: adminNames
+                            });
+                        }
+                    }
+
+                    loadAndClick();
+                })();
+                """
+                self.execute_script(script)
+            except Exception as e:
+                logging.info(
+                    f"Error executing addFriendsFromNewToGroupSection JavaScript: {e}")

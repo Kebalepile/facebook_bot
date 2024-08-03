@@ -10,7 +10,7 @@ import (
 func main() {
 
 	log.Println("Init facebook Bots")
-	mBot := messanger.Bot{
+	mBot := messenger.Bot{
 		Name:    "Messanger Bot",
 		URL:     "https://www.facebook.com/",
 		Message: "hello there, ke nna john",

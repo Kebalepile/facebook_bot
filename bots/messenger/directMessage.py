@@ -35,8 +35,12 @@ class Bot:
         # Block notifications
         prefs = {"profile.default_content_setting_values.notifications": 1}
         chrome_options.add_experimental_option("prefs", prefs)
+
         self.driver = webdriver.Chrome(service=ChromeService(
             ChromeDriverManager().install()), options=chrome_options)
+        
+        # Set the window size to 1000x755
+        self.driver.set_window_size(1000, 755)
 
         logging.info(f"{self.name} loading URL: {self.url}")
 
@@ -203,7 +207,6 @@ class Bot:
 
         more_svg = "M3.25 2.75a1.25 1.25 0 1 0 0 2.5h17.5a1.25 1.25 0 1 0 0-2.5H3.25zM2 12c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 13.25 2 12zm0 8c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 21.25 2 20.69 2 20z"
 
-        self.pause(10)
         logging.info("Navigating to group")
         logging.info("Entering group name to the search group, search form")
 

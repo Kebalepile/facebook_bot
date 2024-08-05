@@ -78,9 +78,37 @@ class Bot:
             logging.error(f"Error clicking element: {e}")
 
     def release_focus(self):
-        # Click on the body to release focus
-        body_element = self.driver.find_element(By.TAG_NAME, "body")
-        body_element.click()
+        # Define a unique ID for the temporary element
+        temp_element_id = "temp-element-id"
+
+        # JavaScript to create and insert a temporary element with a unique ID
+        create_element_script = f"""
+        var tempElement = document.createElement('div');
+        tempElement.id = '{temp_element_id}';
+        tempElement.style.position = 'absolute';
+        tempElement.style.left = '-1000px'; // Move off-screen
+        document.body.appendChild(tempElement);
+        """
+
+        # Execute the script to add the temporary element
+        self.evaluate_javascript(create_element_script)
+
+        # Wait for the temporary element to be present in the DOM
+        temp_element = driver.find_element(By.ID, temp_element_id)
+
+        # Click the temporary element
+        temp_element.click()
+
+        # JavaScript to remove the temporary element
+        remove_element_script = f'''
+            const tempElement = document.getElementById('{temp_element_id}'); 
+            if (tempElement) {
+                {tempElement.remove()}
+                }
+            '''
+
+        # Execute the script to remove the temporary element
+        self.evaluate_javascript(remove_element_script)
 
     def click_svg_parent_element_by_path(self, path_value):
         try:

@@ -77,6 +77,11 @@ class Bot:
         except Exception as e:
             logging.error(f"Error clicking element: {e}")
 
+    def release_focus(self):
+        # Click on the body to release focus
+        body_element = self.driver.find_element(By.TAG_NAME, "body")
+        body_element.click()
+
     def click_svg_parent_element_by_path(self, path_value):
         try:
             nodes = self.driver.find_elements(By.CSS_SELECTOR, "svg path")
@@ -87,6 +92,8 @@ class Bot:
                         By.XPATH, "..").find_element(By.XPATH, "..")
                     if parent:
                         parent.click()
+                        self.release_focus()
+
                         return
             logging.error("SVG element with the specified path not found")
         except Exception as e:
@@ -118,8 +125,8 @@ class Bot:
                 }}
             }})();
             '''
-            result = self.driver.execute_script(js_code)
-            logging.info(result)
+            self.evaluate_javascript(js_code)
+
             self.find_element_and_scroll_into_view("new to the group")
         except Exception as e:
             logging.error(f"Error clicking element with text: {e}")
@@ -148,8 +155,8 @@ class Bot:
             }})();
             '''
             self.pause(10)
-            result = self.driver.execute_script(js_code)
-            logging.info(result)
+            self.evaluate_javascript(js_code)
+
         except Exception as e:
             logging.error(
                 f"Error finding element and scrolling into view: {e}")
@@ -175,7 +182,7 @@ class Bot:
         logging.info("Clicking Messenger icon")
 
         self.click_svg_parent_element_by_path(path)
-        self.driver.execute_script(js_code_part1)
+        self.evaluate_javascript(js_code_part1)
         self.pause(10)
 
         # Locate the contenteditable element
@@ -206,36 +213,33 @@ class Bot:
 
     def navigate_to_group(self):
 
-        path = "M3.25 2.75a1.25 1.25 0 1 0 0 2.5h17.5a1.25 1.25 0 1 0 0-2.5H3.25zM2 12c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 13.25 2 12.69 2 12zm0 8c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 21.25 2 20.69 2 20z"
-        # Click the SVG element
-        self.pause(20)
+        path = "M12 .5C5.649.5.5 5.649.5 12S5.649 23.5 12 23.5 23.5 18.351 23.5 12 18.351.5 12 .5zM2.5 12c0-.682.072-1.348.209-1.99a2 2 0 0 1 0 3.98A9.539 9.539 0 0 1 2.5 12zm4 0a4.001 4.001 0 0 0-3.16-3.912A9.502 9.502 0 0 1 12 2.5a9.502 9.502 0 0 1 8.66 5.588 4.001 4.001 0 0 0 0 7.824 9.514 9.514 0 0 1-1.755 2.613A5.002 5.002 0 0 0 14 14.5h-4a5.002 5.002 0 0 0-4.905 4.025 9.515 9.515 0 0 1-1.755-2.613A4.001 4.001 0 0 0 6.5 12zm13 0a2 2 0 0 1 1.791-1.99 9.538 9.538 0 0 1 0 3.98A2 2 0 0 1 19.5 12zm-2.51 8.086A9.455 9.455 0 0 1 12 21.5c-1.83 0-3.54-.517-4.99-1.414a1.004 1.004 0 0 1-.01-.148V19.5a3 3 0 0 1 3-3h4a3 3 0 0 1 3 3v.438a1 1 0 0 1-.01.148z"
+
         self.click_svg_parent_element_by_path(path)
 
         logging.info("Navigating to group")
         logging.info("Entering group name to the search group, search form")
 
+        self.pause(10)
         # Wait for the search input to be visible and send the search query
         # Load the .env variables
         env_vars = self.load_env()
         # Get search group from .env
         search_group = env_vars["SEARCH_GROUP"]
-        self.wait_visible_and_send_keys(
-            "//input[@placeholder='Search groups']", search_group)
+        # self.wait_visible_and_send_keys(
+        #     "//input[@placeholder='Search groups']", search_group)
 
-        # Click the "Groups" span
-        self.evaluate_javascript("""
-            document.querySelectorAll('span').forEach(element => {
-                if (element.textContent.trim() === 'Groups') {
-                    element.click();
-                }
-            });
-        """)
-
+        search_input = WebDriverWait(self.driver, 10).until(
+            EC.visibility_of_element_located(
+                (By.XPATH, "//input[@placeholder='Search groups']"))
+        )
+        search_input.send_keys(search_group)
+        search_input.send_keys(Keys.ENTER)
         # Pause for 10 seconds
         self.pause(10)
 
         # Ensure the group is public, find and click the first matching element
-        result = self.evaluate_javascript(f"""
+        self.evaluate_javascript(f"""
             (function() {{
                 function findGroupSection() {{
                     return Array.from(document.querySelectorAll('span')).find(span =>
@@ -269,13 +273,11 @@ class Bot:
             }})();
         """)
 
-        logging.info(result)
-
         # Pause for 10 seconds
         self.pause(10)
 
         # Placeholder for adding friends from the new group section
-        # add_friends_from_new_to_group_section()
+        self.add_friends_from_new_to_group_section()
 
     def end_user_message(self):
         message = input("Type your message here: ")
@@ -296,7 +298,7 @@ class Bot:
     def wait_for_continue(self):
         logging.info(
             f"{self.name} paused waiting for your command. \nType 'continue' and press Enter to proceed...")
-        
+
         user_input = input().strip()
         if user_input.lower() == "continue":
             return
@@ -311,7 +313,7 @@ class Bot:
 
     def wait_for_user_input(self):
         logging.info("Type 'e' or 'exit' and press Enter to exit...")
-      
+
         user_input = input().strip()
         if user_input.lower() in ["e", "exit"]:
             return
@@ -336,76 +338,80 @@ class Bot:
 
                 # Execute the JavaScript to add friends from the "New to the group" section
                 script = """
-                (function() {
-                    let adminNames = [];
-                    let clicked = 0;
+                    function script() {
+                        let adminNames = [];
+                        let clicked = 0;
 
-                    function findAndClickAddFriendButtons() {
-                        let newGroupSection = Array.from(document.querySelectorAll('div'))
-                            .find(div => div.textContent.includes('New to the group'));
+                        function findAndClickAddFriendButtons() {
+                            let newGroupSection = Array.from(document.querySelectorAll('div'))
+                                .find(div => div.textContent.includes('New to the group'));
 
-                        if (newGroupSection) {
-                            let addFriendButtons = newGroupSection.querySelectorAll('[aria-label="Add friend"]');
-                            for (let i = 0; i < addFriendButtons.length; i++) {
-                                let card = addFriendButtons[i].closest('div[role="listitem"]');
-                                if (card) {
-                                    let nameElement = card.querySelector('a[role="link"]');
-                                    let name = nameElement ? nameElement.textContent.trim() : null;
+                            if (newGroupSection) {
+                                let addFriendButtons = newGroupSection.querySelectorAll('[aria-label="Add friend"]');
+                                for (let i = 0; i < addFriendButtons.length; i++) {
+                                    let card = addFriendButtons[i].closest('div[role="listitem"]');
+                                    if (card) {
+                                        let nameElement = card.querySelector('a[role="link"]');
+                                        let name = nameElement ? nameElement.textContent.trim() : null;
 
-                                    if (card.textContent.includes('Admin')) {
-                                        if (name) {
-                                            adminNames.push(name);
-                                        }
-                                    } else {
-                                        if (name && adminNames.includes(name)) {
-                                            // Skipping button because the name is flagged as an Admin
+                                        if (card.textContent.includes('Admin')) {
+                                            if (name) {
+                                                adminNames.push(name);
+                                            }
                                         } else {
-                                            // Clicking button within 'New to the group' section
-                                            addFriendButtons[i].click();
-                                            clicked++;
+                                            if (name && adminNames.includes(name)) {
+                                                // Skipping button because the name is flagged as an Admin
+                                            } else {
+                                                // Clicking button within 'New to the group' section
+                                                addFriendButtons[i].click();
+                                                clicked++;
+                                            }
                                         }
                                     }
                                 }
+                                return true;
+                            } else {
+                                return false;
                             }
-                            return true;
-                        } else {
-                            return false;
                         }
-                    }
 
-                    function scrollToBottom() {
-                        window.scrollTo(0, document.body.scrollHeight);
-                    }
+                        function scrollToBottom() {
+                            window.scrollTo(0, document.body.scrollHeight);
+                        }
 
-                    function loadAndClick() {
-                        if (findAndClickAddFriendButtons()) {
-                            setTimeout(() => {
-                                scrollToBottom();
+                        function loadAndClick() {
+                            if (findAndClickAddFriendButtons()) {
                                 setTimeout(() => {
-                                    if (findAndClickAddFriendButtons()) {
-                                        loadAndClick();
-                                    } else {
-                                        console.log({
-                                            status: 'Success',
-                                            clickedCount: clicked,
-                                            adminNames: adminNames
-                                        });
-                                    }
-                                }, 2000); // Wait for 2 seconds after scrolling before clicking
-                            }, 2000); // Wait for 2 seconds before scrolling again
-                        } else {
-                            console.log({
-                                status: 'New to the group section not found',
-                                clickedCount: clicked,
-                                adminNames: adminNames
-                            });
+                                    scrollToBottom();
+                                    setTimeout(() => {
+                                        if (findAndClickAddFriendButtons()) {
+                                            loadAndClick();
+                                        } else {
+                                            console.log({
+                                                status: 'Success',
+                                                clickedCount: clicked,
+                                                adminNames: adminNames
+                                            });
+                                        }
+                                    }, 2000); // Wait for 2 seconds after scrolling before clicking
+                                }, 2000); // Wait for 2 seconds before scrolling again
+                            } else {
+                                console.log({
+                                    status: 'New to the group section not found',
+                                    clickedCount: clicked,
+                                    adminNames: adminNames
+                                });
+                            }
                         }
+
+                        loadAndClick();
                     }
 
-                    loadAndClick();
-                })();
+                    script();
                 """
-                self.execute_script(script)
+                results = self.evaluate_javascript(script)
+                self.pause(20)
+                loggin.info(results)
             except Exception as e:
                 logging.info(
                     f"Error executing addFriendsFromNewToGroupSection JavaScript: {e}")

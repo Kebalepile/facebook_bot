@@ -38,7 +38,7 @@ class Bot:
 
         self.driver = webdriver.Chrome(service=ChromeService(
             ChromeDriverManager().install()), options=chrome_options)
-        
+
         # Set the window size to 1000x755
         self.driver.set_window_size(1000, 755)
 
@@ -56,8 +56,8 @@ class Bot:
         # self.wait_for_continue()
 
         # Handle alerts
-        self.navigate_to_messenger()
-        # self.navigate_to_group()
+        # self.navigate_to_messenger()
+        self.navigate_to_group()
 
     def wait_visible_and_send_keys(self, selector, keys):
         try:
@@ -155,7 +155,7 @@ class Bot:
                 f"Error finding element and scrolling into view: {e}")
 
     def navigate_to_messenger(self):
-        messenger_svg = "m459.603 1077.948-1.762 2.851a.89.89 0 0 1-1.302.245l-1.402-1.072a.354.354 0 0 0-.433.001l-1.893 1.465c-.253.196-.583-.112-.414-.386l1.763-2.851a.89.89 0 0 1 1.301-.245l1.402 1.072a.354.354 0 0 0 .434-.001l1.893-1.465c.253-.196.582.112.413.386M456 1073.5c-3.38 0-6 2.476-6 5.82 0 1.75.717 3.26 1.884 4.305.099.087.158.21.162.342l.032 1.067a.48.48 0 0 0 .674.425l1.191-.526a.473.473 0 0 1 .32-.024c.548.151 1.13.231 1.737.231 3.38 0 6-2.476 6-5.82 0-3.344-2.62-5.82-6-5.82"
+        path = "m459.603 1077.948-1.762 2.851a.89.89 0 0 1-1.302.245l-1.402-1.072a.354.354 0 0 0-.433.001l-1.893 1.465c-.253.196-.583-.112-.414-.386l1.763-2.851a.89.89 0 0 1 1.301-.245l1.402 1.072a.354.354 0 0 0 .434-.001l1.893-1.465c.253-.196.582.112.413.386M456 1073.5c-3.38 0-6 2.476-6 5.82 0 1.75.717 3.26 1.884 4.305.099.087.158.21.162.342l.032 1.067a.48.48 0 0 0 .674.425l1.191-.526a.473.473 0 0 1 .32-.024c.548.151 1.13.231 1.737.231 3.38 0 6-2.476 6-5.82 0-3.344-2.62-5.82-6-5.82"
 
         logging.info("Navigating to messenger")
 
@@ -173,8 +173,8 @@ class Bot:
         '''
 
         logging.info("Clicking Messenger icon")
-       
-        self.click_svg_parent_element_by_path(messenger_svg)
+
+        self.click_svg_parent_element_by_path(path)
         self.driver.execute_script(js_code_part1)
         self.pause(10)
 
@@ -197,22 +197,23 @@ class Bot:
         # Close chatbox
         self.pause(5)
         logging.info("closing chatbox")
-        self.click_svg_parent_element_by_path(
-            "m98.095 917.155 7.75 7.75a.75.75 0 0 0 1.06-1.06l-7.75-7.75a.75.75 0 0 0-1.06 1.06z")
+        # close svg path button
+        path = "m98.095 917.155 7.75 7.75a.75.75 0 0 0 1.06-1.06l-7.75-7.75a.75.75 0 0 0-1.06 1.06z"
+        self.click_svg_parent_element_by_path(path)
 
         # self.wait_for_continue()
         self.wait_for_user_input()
 
     def navigate_to_group(self):
 
-        path = "M3.25 2.75a1.25 1.25 0 1 0 0 2.5h17.5a1.25 1.25 0 1 0 0-2.5H3.25zM2 12c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 13.25 2 12zm0 8c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 21.25 2 20.69 2 20z"
+        path = "M3.25 2.75a1.25 1.25 0 1 0 0 2.5h17.5a1.25 1.25 0 1 0 0-2.5H3.25zM2 12c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 13.25 2 12.69 2 12zm0 8c0-.69.56-1.25 1.25-1.25h17.5a1.25 1.25 0 1 1 0 2.5H3.25C2.56 21.25 2 20.69 2 20z"
         # Click the SVG element
         self.pause(20)
         self.click_svg_parent_element_by_path(path)
 
         logging.info("Navigating to group")
         logging.info("Entering group name to the search group, search form")
-        
+
         # Wait for the search input to be visible and send the search query
         # Load the .env variables
         env_vars = self.load_env()
@@ -295,13 +296,14 @@ class Bot:
     def wait_for_continue(self):
         logging.info(
             f"{self.name} paused waiting for your command. \nType 'continue' and press Enter to proceed...")
-        while True:
-            user_input = input().strip()
-            if user_input.lower() == "continue":
-                break
-            else:
-                logging.info(
-                    "Invalid input. Type 'continue' and press Enter to proceed...")
+        
+        user_input = input().strip()
+        if user_input.lower() == "continue":
+            return
+        else:
+            logging.info(
+                "Invalid input. Type 'continue' and press Enter to proceed...")
+            self.wait_for_continue()
 
     def pause(self, seconds):
         logging.info(f"Pausing for {seconds} seconds...")
@@ -309,13 +311,14 @@ class Bot:
 
     def wait_for_user_input(self):
         logging.info("Type 'e' or 'exit' and press Enter to exit...")
-        while True:
-            user_input = input().strip()
-            if user_input.lower() in ["e", "exit"]:
-                break
-            else:
-                logging.info(
-                    "Invalid input. Type 'e' or 'exit' and press Enter to exit...")
+      
+        user_input = input().strip()
+        if user_input.lower() in ["e", "exit"]:
+            return
+        else:
+            logging.info(
+                "Invalid input. Type 'e' or 'exit' and press Enter to exit...")
+            self.wait_for_user_input()
 
     def evaluate_javascript(self, script):
         return self.driver.execute_script(script)

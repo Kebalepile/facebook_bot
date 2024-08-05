@@ -411,7 +411,7 @@ class Bot:
                 """
                 results = self.evaluate_javascript(script)
                 self.pause(20)
-                loggin.info(results)
+                logging.info(results)
             except Exception as e:
                 logging.info(
                     f"Error executing addFriendsFromNewToGroupSection JavaScript: {e}")

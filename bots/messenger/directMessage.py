@@ -8,7 +8,8 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import StaleElementReferenceException
+from selenium.common.exceptions import StaleElementReferenceException, ElementNotInteractableException
+# , ElementClickInterceptedException, NoSuchElementException
 from webdriver_manager.chrome import ChromeDriverManager
 
 logging.basicConfig(level=logging.INFO)
@@ -246,7 +247,7 @@ class Bot:
                     # extract and clean the "Write to" text
                     describedby = messenger_chatbox.get_attribute(
                         "aria-describedby")
-                        
+
                     prefix = "Write to"
                     if prefix in describedby:
                         start_index = describedby.index(prefix) + len(prefix)
@@ -270,9 +271,17 @@ class Bot:
                     self.close_chat_box()
                     return self.send_message(message, index + 1, total, selector, path, False)
 
+        except ElementNotInteractableException:
+            self.close_chat_box()
+            return self.send_message(message, index + 1, total, selector, path, False)
+
         except Exception as e:
             logging.error(
                 f"Error while trying to open messenger chat(s): {e}")
+
+                # work on chatcking this error/bug
+                # Nandiwe can't access this chat yet
+                # You'll be able to send messages when Nandiwe next
 
     def close_chat_box(self):
         try:
@@ -388,7 +397,7 @@ class Bot:
 
     def end_user_message(self):
         message = input("Type your message here: ")
-        message = self.send_bmp_compatible_text(message)
+        # message = self.send_bmp_compatible_text(message)
         return message
 
     def load_env(self):

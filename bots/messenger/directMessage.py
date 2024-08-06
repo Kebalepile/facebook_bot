@@ -8,7 +8,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import StaleElementReferenceException, ElementNotInteractableException
+from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException, ElementNotInteractableException
 # , ElementClickInterceptedException, NoSuchElementException
 from webdriver_manager.chrome import ChromeDriverManager
 
@@ -216,7 +216,8 @@ class Bot:
     def send_message(self, message, index, total, selector, path, clicked=False):
         if index >= total:
             return f"Done sending {message} to relevant targets"
-        # Check if the messenger icon has already been clikced or not
+        
+        # Check if the messenger icon has already been clicked or not
         if not clicked:
             self.click_svg_parent_element_by_path(path)
             logging.info("Clicked Messenger icon")
@@ -225,7 +226,7 @@ class Bot:
             elems = self.wait.until(
                 EC.presence_of_all_elements_located((By.CSS_SELECTOR, selector)))
             self.pause(10)
-            logging.info("opening messenger chat")
+            logging.info("Opening messenger chat")
 
             if index < len(elems):
                 try:
@@ -233,6 +234,24 @@ class Bot:
                         "arguments[0].scrollIntoView(true);", elems[index])
                     elems[index].click()
                     self.pause(10)
+
+                    try:
+                        # Locate the element using XPath and the 'contains' function
+                        has_no_messenger = self.driver.find_element(
+                            By.XPATH, "//*[contains(text(), \"can't access this chat yet\")]")
+
+                        barred_from_chat = self.driver.find_element(
+                            By.XPATH,"//*[contains(text(),\"You can't message this account\")]"
+                        )
+                        # if such element is found
+                        if has_no_messenger or barred_from_chat:
+                            # On to the next messenger chatbox
+                            self.close_chat_box()
+                            return self.send_message(message, index + 1, total, selector, path, False)
+                    except NoSuchElementException:
+                        # Element indicating "can't access this chat yet" not found, continue as normal
+                        pass
+
                     # Re-locate the contenteditable element before interacting
                     messenger_chatbox = self.wait.until(
                         EC.presence_of_element_located(
@@ -240,11 +259,13 @@ class Bot:
                                 'div[aria-label="Message"][contenteditable="true"][data-lexical-editor="true"]')
                         )
                     )
+
                     logging.info(
                         "Typing end-user message into the Messenger chatbox")
+                    # Type and send message via messenger
                     messenger_chatbox.send_keys(message)
                     messenger_chatbox.send_keys(Keys.ENTER)
-                    # extract and clean the "Write to" text
+                    # Extract and clean the "Write to" text
                     describedby = messenger_chatbox.get_attribute(
                         "aria-describedby")
 
@@ -252,7 +273,7 @@ class Bot:
                     if prefix in describedby:
                         start_index = describedby.index(prefix) + len(prefix)
                         recipient_name = describedby[start_index:].strip()
-                        logging.info(f"sent '{message}' to {recipient_name}")
+                        logging.info(f"Sent '{message}' to {recipient_name}")
 
                     self.close_chat_box()
                     return self.send_message(message, index + 1, total, selector, path, False)
@@ -266,23 +287,16 @@ class Bot:
                                 'div[aria-label="Message"][contenteditable="true"][data-lexical-editor="true"]')
                         )
                     )
-                    messenger_chatbox.send_keys(escaped_text_message)
+                    messenger_chatbox.send_keys(message)
                     messenger_chatbox.send_keys(Keys.ENTER)
                     self.close_chat_box()
                     return self.send_message(message, index + 1, total, selector, path, False)
 
-        except ElementNotInteractableException:
-            self.close_chat_box()
-            return self.send_message(message, index + 1, total, selector, path, False)
-
         except Exception as e:
-            logging.error(
-                f"Error while trying to open messenger chat(s): {e}")
+            logging.error(f"Error while trying to open messenger chat(s): {e}")
+            return f"Failed to send message: {e}"
 
-                # work on chatcking this error/bug
-                # Nandiwe can't access this chat yet
-                # You'll be able to send messages when Nandiwe next
-
+        return "Completed execution of send_message method"
     def close_chat_box(self):
         try:
 
@@ -307,7 +321,7 @@ class Bot:
         elems = self.wait.until(
             EC.presence_of_all_elements_located((By.CSS_SELECTOR, selector))
         )
-        self.pause(10)
+        self.pause(15)
         logging.info("opening messenger chats")
 
         num_of_chats = len(elems)

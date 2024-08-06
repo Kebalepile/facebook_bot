@@ -88,16 +88,16 @@ class Bot:
         if self.is_bmp_compatible(text):
             return text
         else:
-            bmp_text =  []
+            bmp_text = []
             for char in text:
                 if ord(char) <= 0xFFFF:
                     bmp_text.append(char)
                 else:
                     logging.warning(
                         f"Character '{char}' is outside BMP and cannot be sent directly.")
-                
+
                 return ''.join(bmp_text)
-                
+
     def release_focus(self):
         # Define a unique ID for the temporary element
         temp_element_id = "temp-element-id"
@@ -212,6 +212,68 @@ class Bot:
             logging.error(
                 f"Error finding element and scrolling into view: {e}")
 
+    def send_message(self, message, index, total, selector, path, clicked=False):
+        if index >= total:
+            return f"Done sending {message} to relevant targets"
+        # Check if the messenger icon has already been clikced or not
+        if not clicked:
+            self.click_svg_parent_element_by_path(path)
+            logging.info("Clicked Messenger icon")
+
+        try:
+            elems = self.wait.until(
+                EC.presence_of_all_elements_located((By.CSS_SELECTOR, selector)))
+            self.pause(10)
+            logging.info("opening messenger chat")
+
+            if index < len(elems):
+                try:
+                    self.driver.execute_script(
+                        "arguments[0].scrollIntoView(true);", elems[index])
+                    elems[index].click()
+                    self.pause(10)
+                    # Re-locate the contenteditable element before interacting
+                    messenger_chatbox = self.wait.until(
+                        EC.presence_of_element_located(
+                            (By.CSS_SELECTOR,
+                                'div[aria-label="Message"][contenteditable="true"][data-lexical-editor="true"]')
+                        )
+                    )
+                    logging.info(
+                        "Typing end-user message into the Messenger chatbox")
+                    messenger_chatbox.send_keys(message)
+                    messenger_chatbox.send_keys(Keys.ENTER)
+                    # extract and clean the "Write to" text
+                    describedby = messenger_chatbox.get_attribute(
+                        "aria-describedby")
+                        
+                    prefix = "Write to"
+                    if prefix in describedby:
+                        start_index = describedby.index(prefix) + len(prefix)
+                        recipient_name = describedby[start_index:].strip()
+                        logging.info(f"sent '{message}' to {recipient_name}")
+
+                    self.close_chat_box()
+                    return self.send_message(message, index + 1, total, selector, path, False)
+
+                except StaleElementReferenceException as e:
+                    logging.error(f"StaleElementReferenceException: {e}")
+                    # Re-locate the element and try again
+                    messenger_chatbox = self.wait.until(
+                        EC.presence_of_element_located(
+                            (By.CSS_SELECTOR,
+                                'div[aria-label="Message"][contenteditable="true"][data-lexical-editor="true"]')
+                        )
+                    )
+                    messenger_chatbox.send_keys(escaped_text_message)
+                    messenger_chatbox.send_keys(Keys.ENTER)
+                    self.close_chat_box()
+                    return self.send_message(message, index + 1, total, selector, path, False)
+
+        except Exception as e:
+            logging.error(
+                f"Error while trying to open messenger chat(s): {e}")
+
     def close_chat_box(self):
         try:
 
@@ -229,7 +291,6 @@ class Bot:
         path = "m459.603 1077.948-1.762 2.851a.89.89 0 0 1-1.302.245l-1.402-1.072a.354.354 0 0 0-.433.001l-1.893 1.465c-.253.196-.583-.112-.414-.386l1.763-2.851a.89.89 0 0 1 1.301-.245l1.402 1.072a.354.354 0 0 0 .434-.001l1.893-1.465c.253-.196.582.112.413.386M456 1073.5c-3.38 0-6 2.476-6 5.82 0 1.75.717 3.26 1.884 4.305.099.087.158.21.162.342l.032 1.067a.48.48 0 0 0 .674.425l1.191-.526a.473.473 0 0 1 .32-.024c.548.151 1.13.231 1.737.231 3.38 0 6-2.476 6-5.82 0-3.344-2.62-5.82-6-5.82"
 
         logging.info("Navigating to messenger")
-
         self.click_svg_parent_element_by_path(path)
         logging.info("Clicked Messenger icon")
 
@@ -240,47 +301,19 @@ class Bot:
         self.pause(10)
         logging.info("opening messenger chats")
 
-        if len(elems) > 0:
+        num_of_chats = len(elems)
+        logging.info(f"found {num_of_chats} chats that are tragetable.")
+
+        if num_of_chats > 0:
             # Type text into the contenteditable element
-            try:
-                text_message = self.end_user_message()
-                escaped_text_message = text_message.replace('"', '\\"')
-                logging.info(
-                    "Typing end-user message into the Messenger chatbox")
+            text_message = self.end_user_message()
+            escaped_text_message = text_message.replace('"', '\\"')
+            alert = self.send_message(
+                text_message, 0, num_of_chats, selector, path, True)
+            logging.info(alert)
 
-                for elem in elems:
-                    try:
-
-                        elem.click()
-                        # Re-locate the contenteditable element before interacting
-                        messenger_chatbox = self.wait.until(
-                            EC.presence_of_element_located(
-                                (By.CSS_SELECTOR,
-                                 'div[aria-label="Message"][contenteditable="true"][data-lexical-editor="true"]')
-                            )
-                        )
-                        messenger_chatbox.send_keys(escaped_text_message)
-                        messenger_chatbox.send_keys(Keys.ENTER)
-                        self.close_chat_box()
-
-                    except StaleElementReferenceException as e:
-                        logging.error(f"StaleElementReferenceException: {e}")
-                        # Re-locate the element and try again
-                        messenger_chatbox = self.wait.until(
-                            EC.presence_of_element_located(
-                                (By.CSS_SELECTOR,
-                                 'div[aria-label="Message"][contenteditable="true"][data-lexical-editor="true"]')
-                            )
-                        )
-                        messenger_chatbox.send_keys(escaped_text_message)
-                        messenger_chatbox.send_keys(Keys.ENTER)
-                        self.close_chat_box()
-
-            except Exception as e:
-                logging.error(
-                    f"Error while trying to open messenger chat(s): {e}")
         else:
-            logging.info("Target element not found")
+            logging.error("Failed to find any chats from messanger")
 
         # self.wait_for_continue()
         self.wait_for_user_input()

@@ -8,6 +8,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import StaleElementReferenceException
 from webdriver_manager.chrome import ChromeDriverManager
 
 logging.basicConfig(level=logging.INFO)
@@ -18,6 +19,7 @@ class Bot:
         self.name = name
         self.url = url
         self.driver = None
+        self.wait = None
 
     def run(self):
         logging.info(f"init: {self.name}")
@@ -41,6 +43,7 @@ class Bot:
 
         # Set the window size to 1000x755
         self.driver.set_window_size(1000, 755)
+        self.wait = WebDriverWait(self.driver, 10)
 
         logging.info(f"{self.name} loading URL: {self.url}")
 
@@ -56,12 +59,12 @@ class Bot:
         # self.wait_for_continue()
 
         # Handle alerts
-        # self.navigate_to_messenger()
-        self.navigate_to_group()
+        self.navigate_to_messenger()
+        # self.navigate_to_group()
 
     def wait_visible_and_send_keys(self, selector, keys):
         try:
-            element = WebDriverWait(self.driver, 10).until(
+            element = self.wait.until(
                 EC.visibility_of_element_located((By.XPATH, selector))
             )
             element.send_keys(keys)
@@ -70,7 +73,7 @@ class Bot:
 
     def wait_visible_and_click(self, selector):
         try:
-            element = WebDriverWait(self.driver, 10).until(
+            element = self.wait.until(
                 EC.visibility_of_element_located((By.XPATH, selector))
             )
             element.click()
@@ -94,7 +97,7 @@ class Bot:
         self.evaluate_javascript(create_element_script)
 
         # Wait for the temporary element to be present in the DOM
-        temp_element = driver.find_element(By.ID, temp_element_id)
+        temp_element = self.driver.find_element(By.ID, temp_element_id)
 
         # Click the temporary element
         temp_element.click()
@@ -112,16 +115,17 @@ class Bot:
 
     def click_svg_parent_element_by_path(self, path_value):
         try:
+            # Locate SVG path elements using CSS selector
             nodes = self.driver.find_elements(By.CSS_SELECTOR, "svg path")
             for node in nodes:
                 path_attr = node.get_attribute("d")
                 if path_attr == path_value:
-                    parent = node.find_element(
-                        By.XPATH, "..").find_element(By.XPATH, "..")
+                    # Traverse up to the desired parent element
+                    parent = node.find_element(By.XPATH, "../..")
                     if parent:
-                        parent.click()
-                        self.release_focus()
-
+                        # Wait until the parent element is clickable
+                        clickable_parent = self.wait.until(EC.element_to_be_clickable(parent))
+                        clickable_parent.click()
                         return
             logging.error("SVG element with the specified path not found")
         except Exception as e:
@@ -193,48 +197,65 @@ class Bot:
         path = "m459.603 1077.948-1.762 2.851a.89.89 0 0 1-1.302.245l-1.402-1.072a.354.354 0 0 0-.433.001l-1.893 1.465c-.253.196-.583-.112-.414-.386l1.763-2.851a.89.89 0 0 1 1.301-.245l1.402 1.072a.354.354 0 0 0 .434-.001l1.893-1.465c.253-.196.582.112.413.386M456 1073.5c-3.38 0-6 2.476-6 5.82 0 1.75.717 3.26 1.884 4.305.099.087.158.21.162.342l.032 1.067a.48.48 0 0 0 .674.425l1.191-.526a.473.473 0 0 1 .32-.024c.548.151 1.13.231 1.737.231 3.38 0 6-2.476 6-5.82 0-3.344-2.62-5.82-6-5.82"
 
         logging.info("Navigating to messenger")
-
-        # First part: Click the target element
-        js_code_part1 = '''
-        (function() {
-            const targetElements = document.querySelectorAll('.x1i10hfl.x1qjc9v5.xjbqb8w.xjqpnuy.xa49m3k.xqeqjp1.x2hbi6w.x13fuv20.xu3j5b3.x1q0q8m5.x26u7qi.x972fbf.xcfux6l.x1qhh985.xm0m39n.x9f619.x1ypdohk.xdl72j9.x2lah0s.xe8uvvx.xdj266r.x11i5rnm.xat24cr.x1mh8g0r.x2lwn1j.xeuugli.xexx8yu.x4uap5.x18d9i69.xkhd6sd.x1n2onr6.x16tdsg8.x1hl2dhg.xggy1nq.x1ja2u2z.x1t137rt.x1o1ewxj.x3x9cwd.x1e5q0jg.x13rtm0m.x1q0g3np.x87ps6o.x1lku1pv.x1a2a7pz.x1lliihq');
-            if (targetElements.length) {
-                targetElements[0].click();
-                return 'Target element clicked';
-            } else {
-                return 'Target element not found';
-            }
-        })();
-        '''
-
         logging.info("Clicking Messenger icon")
 
         self.click_svg_parent_element_by_path(path)
-        self.evaluate_javascript(js_code_part1)
-        self.pause(10)
-
-        # Locate the contenteditable element
-        wait = WebDriverWait(self.driver, 10)
-        contenteditable_element = wait.until(
-            EC.presence_of_element_located(
-                (By.CSS_SELECTOR,
-                 'div[aria-label="Message"][contenteditable="true"][data-lexical-editor="true"]')
-            )
+        logging.info("moving to chats")
+        selector = '.x1i10hfl.x1qjc9v5.xjbqb8w.xjqpnuy.xa49m3k.xqeqjp1.x2hbi6w.x13fuv20.xu3j5b3.x1q0q8m5.x26u7qi.x972fbf.xcfux6l.x1qhh985.xm0m39n.x9f619.x1ypdohk.xdl72j9.x2lah0s.xe8uvvx.xdj266r.x11i5rnm.xat24cr.x1mh8g0r.x2lwn1j.xeuugli.xexx8yu.x4uap5.x18d9i69.xkhd6sd.x1n2onr6.x16tdsg8.x1hl2dhg.xggy1nq.x1ja2u2z.x1t137rt.x1o1ewxj.x3x9cwd.x1e5q0jg.x13rtm0m.x1q0g3np.x87ps6o.x1lku1pv.x1a2a7pz.x1lliihq'
+        elems = self.wait.until(
+            EC.presence_of_all_elements_located((By.CSS_SELECTOR,selector))
         )
-        # Type text into the contenteditable element
-        text_message = self.end_user_message()
-        escaped_text_message = text_message.replace('"', '\\"')
-        logging.info("Typing end-user message into the Messenger chatbox")
-        contenteditable_element.send_keys(escaped_text_message)
+        self.pause(10)
+        
+        if len(elems) > 0:
+            # Type text into the contenteditable element
+            try:
+                text_message = self.end_user_message()
+                escaped_text_message = text_message.replace('"', '\\"')
+                logging.info("Typing end-user message into the Messenger chatbox")
+                
+                elems = self.wait.until(
+                    EC.presence_of_all_elements_located(
+                        (By.CSS_SELECTOR, 'div[aria-label="Message"][contenteditable="true"][data-lexical-editor="true"]')
+                    )
+                )
+                
+                for elem in elems:
+                    try:
+                        elem.click()
+                        # Re-locate the contenteditable element before interacting
+                        contenteditable_element = self.wait.until(
+                            EC.presence_of_element_located(
+                                (By.CSS_SELECTOR,
+                                'div[aria-label="Message"][contenteditable="true"][data-lexical-editor="true"]')
+                            )
+                        )
+                        contenteditable_element.send_keys(escaped_text_message)
+                        contenteditable_element.send_keys(Keys.ENTER)
+                        
+                    except StaleElementReferenceException as e:
+                        logging.error(f"StaleElementReferenceException: {e}")
+                        # Re-locate the element and try again
+                        contenteditable_element = self.wait.until(
+                            EC.presence_of_element_located(
+                                (By.CSS_SELECTOR,
+                                'div[aria-label="Message"][contenteditable="true"][data-lexical-editor="true"]')
+                            )
+                        )
+                        contenteditable_element.send_keys(escaped_text_message)
+                        contenteditable_element.send_keys(Keys.ENTER)
 
-        # Simulate pressing the "Enter" key
-        contenteditable_element.send_keys(Keys.ENTER)
-        # Close chatbox
-        self.pause(5)
-        logging.info("closing chatbox")
-        # close svg path button
-        path = "m98.095 917.155 7.75 7.75a.75.75 0 0 0 1.06-1.06l-7.75-7.75a.75.75 0 0 0-1.06 1.06z"
-        self.click_svg_parent_element_by_path(path)
+                self.pause(5)
+                logging.info("closing chatbox")
+                # close svg path button
+                path = "m98.095 917.155 7.75 7.75a.75.75 0 0 0 1.06-1.06l-7.75-7.75a.75.75 0 0 0-1.06 1.06z"
+                self.click_svg_parent_element_by_path(path)
+
+            except Exception as e:
+                    logging.error(f"An error occurred: {e}")
+        else:
+            logging.info("Target element not found")
+       
 
         # self.wait_for_continue()
         self.wait_for_user_input()
@@ -257,7 +278,7 @@ class Bot:
         # self.wait_visible_and_send_keys(
         #     "//input[@placeholder='Search groups']", search_group)
 
-        search_input = WebDriverWait(self.driver, 10).until(
+        search_input = self.wait.until(
             EC.visibility_of_element_located(
                 (By.XPATH, "//input[@placeholder='Search groups']"))
         )

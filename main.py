@@ -7,7 +7,7 @@ def main():
          level=logging.INFO, format='%(asctime)s [%(levelname)s]: %(message)s', datefmt='%d %B %Y %H:%M:%S')
 
     try:
-        bot = Bot(name="Messanger Bot", url="https://www.facebook.com/")
+        bot = Bot(name="Messenger Bot", url="https://www.facebook.com/")
         bot.run()
     except Exception as e:
         logging.error(f"An error occurred: {e}")
